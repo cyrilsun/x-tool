@@ -20,14 +20,25 @@ pip install pyinstaller
 
 ## 构建脚本使用方法
 
-### 基本用法
+### 使用 Python 脚本 (build.py)
 
 ```bash
 # 运行构建脚本
 python build.py
 ```
 
+### 使用 Shell 脚本 (build.sh)
+
+为了更方便地使用构建功能，我们还提供了一个 Shell 脚本 `build.sh`，它可以自动激活虚拟环境、安装依赖并运行构建命令。
+
+```bash
+# 运行构建脚本
+./build.sh
+```
+
 ### 命令行参数
+
+#### build.py 参数
 
 ```
 X-Tool多平台构建脚本
@@ -40,7 +51,20 @@ optional arguments:
   --onefile             生成单文件可执行程序
 ```
 
+#### build.sh 参数
+
+```bash
+./build.sh [选项]
+
+选项：
+  --clean              清理构建文件
+  --platform <平台>     选择构建平台 (windows, macos, linux, all)
+  --onefile            生成单文件可执行程序
+```
+
 ### 示例
+
+#### 使用 build.py 示例
 
 1. **构建所有平台**
    ```bash
@@ -60,6 +84,28 @@ optional arguments:
 4. **清理构建文件**
    ```bash
    python build.py --clean
+   ```
+
+#### 使用 build.sh 示例
+
+1. **构建所有平台**
+   ```bash
+   ./build.sh
+   ```
+
+2. **只构建macOS版本**
+   ```bash
+   ./build.sh --platform macos
+   ```
+
+3. **构建单文件可执行程序**
+   ```bash
+   ./build.sh --platform windows --onefile
+   ```
+
+4. **清理构建文件**
+   ```bash
+   ./build.sh --clean
    ```
 
 ## 构建输出
