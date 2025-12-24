@@ -1,0 +1,65 @@
+# Python虚拟环境
+venv/
+env/
+.env/
+.venv/
+
+# IDE配置
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 日志文件
+*.log
+logs/
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 构建文件
+dist/
+build/
+*.spec
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+
+# PyInstaller
+*.pyc
+*.pyo
+*.pyd
+
+# 其他
+*.egg-info/
+*.egg
+.mypy_cache/
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+.cache/
+
+# X-Tool特定文件
+x_tool.db
