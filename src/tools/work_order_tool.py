@@ -25,10 +25,10 @@ class WorkOrderTool(BaseTool):
         self.status_combo = QComboBox()
         self.status_combo.addItems([
             "移到回头看待处理",
-            "青岛已通过",
+            "青岛已通过(弃用)",
             "青岛通过移出待处理",
             "移出回头看",
-            "青岛待审核设置青岛已通过"
+            "设置青岛已通过"
         ])
         status_layout.addWidget(status_label)
         status_layout.addWidget(self.status_combo)

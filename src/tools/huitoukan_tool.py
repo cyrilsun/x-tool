@@ -313,29 +313,15 @@ class WorkOrderBackTool:
                     if not result:
                         results.append({"status": "error", "message": f"工单 {order_id} 不存在", "order": order_id})
                         continue
-                    # 判断查询列表大于1条
-                    if len(result) > 1:
-                        # 处理重办单 qdcb=1的工单
-                        for item in result:
-                            if item['qdcb'] == 1:
-                                # 更新工单表回头看状态
-                                sql1 = "update tb_gov_hot_line set htkshzt=3 WHERE id = %s"
-                                logger.info(f'执行更新重办工单表回头看审核状态SQL: {sql1}, 参数: {item["id"]}')
-                                cursor.execute(sql1, (item['id'],))
-                                # 更新办理部门回头看状态
-                                sql2 = "update tb_gov_hot_line_handle_department set htkshzt=3 WHERE event_id = %s"
-                                logger.info(f'执行更新重办单办理部门回头看审核状态SQL: {sql2}, 参数: {item["id"]}')
-                                cursor.execute(sql2, (item['id'],))
-                    else:
-                        for item in result:
-                            # 更新办理单工单表回头看状态
-                            sql1 = "update tb_gov_hot_line set  htkshzt=3 WHERE id = %s"
-                            logger.info(f'执行更新办理单工单表回头看状态SQL: {sql1}, 参数: {item["id"]}')
-                            cursor.execute(sql1, (item['id'],))
-                            # 更新办理部门回头看状态
-                            sql2 = "update tb_gov_hot_line_handle_department set htkshzt=3 WHERE event_id = %s"
-                            logger.info(f'执行更新办理单办理部门回头看审核状态SQL: {sql2}, 参数: {item["id"]}')
-                            cursor.execute(sql2, (item['id'],))
+                    for item in result:
+                        # 更新办理单工单表回头看状态
+                        sql1 = "update tb_gov_hot_line set  htkshzt=3 WHERE id = %s and htkshzt=2"
+                        logger.info(f'执行更新办理单工单表回头看状态SQL: {sql1}, 参数: {item["id"]}')
+                        cursor.execute(sql1, (item['id'],))
+                        # 更新办理部门回头看状态
+                        sql2 = "update tb_gov_hot_line_handle_department set htkshzt=3 WHERE event_id = %s and htkshzt=2"
+                        logger.info(f'执行更新办理单办理部门回头看审核状态SQL: {sql2}, 参数: {item["id"]}')
+                        cursor.execute(sql2, (item['id'],))
                 # 提交事务
                 self.connection.commit()
                 return {"status": "success", "results": results}
