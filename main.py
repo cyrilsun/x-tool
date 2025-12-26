@@ -13,8 +13,8 @@ if __name__ == "__main__":
     window = MainWindow()
     
     # 添加工具
-    window.add_tool("计算器", CalculatorTool())
-    window.add_tool("笔记", NoteTool())
+    # window.add_tool("计算器", CalculatorTool())
+    # window.add_tool("笔记", NoteTool())
     window.add_tool("回头看工单", WorkOrderTool())
     
     # 显示主窗口

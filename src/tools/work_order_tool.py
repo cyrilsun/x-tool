@@ -82,7 +82,7 @@ class WorkOrderTool(BaseTool):
                 # 移出回头看
                 result = self.work_order_back_tool.huitoukan_remove_2(work_order_list)
             elif selected_status == 5:
-                # 青岛待审核设置青岛已通过
+                # 设置青岛已通过
                 result = self.work_order_back_tool.huitoukan_qd_pass2(work_order_list)
             else:
                 QMessageBox.warning(self, "警告", "无效的状态选择")
