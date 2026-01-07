@@ -1,9 +1,9 @@
 import sys
+
 from PyQt6.QtWidgets import QApplication
-from src.ui.main_window import MainWindow
-from src.tools.calculator_tool import CalculatorTool
-from src.tools.note_tool import NoteTool
+
 from src.tools.work_order_tool import WorkOrderTool
+from src.ui.main_window import MainWindow
 
 if __name__ == "__main__":
     # 创建应用程序实例
