@@ -91,6 +91,9 @@ def load_plugins(window: MainWindow):
 
         plugin.on_activate()
 
+    # 默认显示欢迎页面
+    window.on_tool_selected(-1)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -109,6 +112,9 @@ if __name__ == "__main__":
     about_action.triggered.connect(lambda: show_about_dialog(window))
 
     load_plugins(window)
+
+    # 默认选中首页
+    window.tool_list_widget.setCurrentRow(0)
 
     window.show()
 
