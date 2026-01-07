@@ -15,6 +15,26 @@ class MainWindow(QMainWindow):
             QMainWindow {
                 background-color: #f0f0f0;
             }
+            QMainWindow::separator {
+                background-color: #d0d0d0;
+            }
+            QMenuBar {
+                background-color: #f5f5f5;
+                border-bottom: 1px solid #d0d0d0;
+                padding: 4px;
+                font-size: 14px;
+            }
+            QMenuBar::item:selected {
+                background-color: #e0e0e0;
+            }
+            QMenu {
+                background-color: #ffffff;
+                border: 1px solid #d0d0d0;
+            }
+            QMenu::item:selected {
+                background-color: #4a90e2;
+                color: white;
+            }
             QSplitter::handle {
                 background-color: #d0d0d0;
             }
