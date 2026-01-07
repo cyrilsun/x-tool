@@ -6,7 +6,7 @@ from .huitoukan_tool import WorkOrderBackTool
 
 class WorkOrderTool(BaseTool):
     def __init__(self):
-        super().__init__("回头看工单", "用于处理回头看工单的状态更新")
+        super().__init__("回头看工单", "设置回头看工单的状态")
 
         # 初始化工具UI
         self.init_ui()

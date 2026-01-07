@@ -15,7 +15,33 @@ if __name__ == "__main__":
     # 添加工具
     # window.add_tool("计算器", CalculatorTool())
     # window.add_tool("笔记", NoteTool())
-    window.add_tool("回头看工单", WorkOrderTool())
+    
+    # 添加回头看工单工具并设置样式
+    work_order_tool = WorkOrderTool()
+    work_order_tool.setStyleSheet("""
+        QWidget {
+            font-size: 18px;
+        }
+        QGroupBox {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        QLabel {
+            font-size: 18px;
+        }
+        QComboBox {
+            font-size: 18px;
+            padding: 8px;
+        }
+        QTextEdit {
+            font-size: 18px;
+        }
+        QPushButton {
+            font-size: 18px;
+            font-weight: bold;
+        }
+    """)
+    window.add_tool("回头看工单", work_order_tool)
     
     # 显示主窗口
     window.show()
