@@ -52,6 +52,7 @@ def build_macos(args):
         "--windowed",
         "--osx-bundle-identifier=com.xtool.app",
         "--add-data=resources:resources",
+        "--icon=icon.icns",
         "main.py"
     ]
     
