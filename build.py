@@ -46,12 +46,12 @@ def build_macos(args):
     """构建macOS版本"""
     print("正在构建macOS版本...")
     
-    # PyInstaller构建命令
     cmd = [
         "pyinstaller",
         "--name=X-Tool",
-        "--windowed",  # 无控制台窗口
-        "--add-data=resources:resources",  # 添加资源文件
+        "--windowed",
+        "--osx-bundle-identifier=com.xtool.app",
+        "--add-data=resources:resources",
         "main.py"
     ]
     

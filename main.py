@@ -9,7 +9,6 @@ from src.ui.main_window import MainWindow
 
 VERSION = "1.0.0"
 VERSION_INFO = """
-版本: 1.0.0
 技术支持：如有问题请联系管理员
 """
 
@@ -59,7 +58,11 @@ def check_update(parent):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-
+    
+    app.setApplicationName("X-Tool")
+    app.setApplicationDisplayName("X-Tool")
+    app.setDesktopFileName("com.xtool.app")
+    
     window = MainWindow()
     window.setWindowTitle(f"X-Tool v{VERSION}")
 
