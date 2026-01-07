@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QTextEdit, QLabel, QMessageBox, QGroupBox
-from PyQt6.QtCore import Qt
+
 from .base_tool import BaseTool
 from .huitoukan_tool import WorkOrderBackTool
 
@@ -48,11 +48,9 @@ class WorkOrderTool(BaseTool):
         status_label.setStyleSheet("font-size: 14px; color: #34495e;")
         self.status_combo = QComboBox()
         self.status_combo.addItems([
-            "移到回头看待处理",
-            "青岛已通过(弃用)",
-            "青岛通过移出待处理",
+            "移入待处理",
             "移出回头看",
-            "设置青岛已通过"
+            "青岛已通过"
         ])
         self.status_combo.setStyleSheet("""
             QComboBox {
@@ -104,7 +102,7 @@ class WorkOrderTool(BaseTool):
         input_layout = QVBoxLayout()
 
         self.work_order_text = QTextEdit()
-        self.work_order_text.setPlaceholderText("请输入工单号，每行一个工单号，例如：\n20230001\n20230002\n20230003")
+        self.work_order_text.setPlaceholderText("请输入工单号，每行一个工单号。")
         self.work_order_text.setMinimumHeight(250)
         self.work_order_text.setStyleSheet("""
             QTextEdit {
@@ -204,15 +202,9 @@ class WorkOrderTool(BaseTool):
                 # 移到回头看待处理
                 result = self.work_order_back_tool.huitoukan_to_handle(work_order_list)
             elif selected_index == 1:
-                # 青岛已通过
-                result = self.work_order_back_tool.huitoukan_qd_pass(work_order_list)
-            elif selected_index == 2:
-                # 青岛通过移出待处理
-                result = self.work_order_back_tool.huitoukan_pass_remove(work_order_list)
-            elif selected_index == 3:
                 # 移出回头看
                 result = self.work_order_back_tool.huitoukan_remove_2(work_order_list)
-            elif selected_index == 4:
+            elif selected_index == 2:
                 # 设置青岛已通过
                 result = self.work_order_back_tool.huitoukan_qd_pass2(work_order_list)
             else:
