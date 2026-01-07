@@ -52,6 +52,10 @@ def build_macos(args):
         "--windowed",
         "--osx-bundle-identifier=com.xtool.app",
         "--add-data=resources:resources",
+        "--add-data=plugins:plugins",
+        "--collect-data=src.plugins",
+        "--hidden-import=pymysql",
+        "--hidden-import=PyQt6",
         "--icon=icon.icns",
         "main.py"
     ]
@@ -72,12 +76,15 @@ def build_windows(args):
     """构建Windows版本"""
     print("正在构建Windows版本...")
     
-    # PyInstaller构建命令
     cmd = [
         "pyinstaller",
         "--name=X-Tool",
-        "--windowed",  # 无控制台窗口
-        "--add-data=resources;resources",  # 添加资源文件 (Windows使用分号)
+        "--windowed",
+        "--add-data=resources;resources",
+        "--add-data=plugins;plugins",
+        "--collect-data=src.plugins",
+        "--hidden-import=pymysql",
+        "--hidden-import=PyQt6",
         "main.py"
     ]
     
@@ -97,12 +104,15 @@ def build_linux(args):
     """构建Linux版本"""
     print("正在构建Linux版本...")
     
-    # PyInstaller构建命令
     cmd = [
         "pyinstaller",
         "--name=X-Tool",
-        "--windowed",  # 无控制台窗口
-        "--add-data=resources:resources",  # 添加资源文件
+        "--windowed",
+        "--add-data=resources:resources",
+        "--add-data=plugins:plugins",
+        "--collect-data=src.plugins",
+        "--hidden-import=pymysql",
+        "--hidden-import=PyQt6",
         "main.py"
     ]
     

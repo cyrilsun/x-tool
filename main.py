@@ -1,10 +1,10 @@
 import sys
 
-from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QMenuBar
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
 
-from src.tools.work_order_tool import WorkOrderTool
+from src.plugins.plugin_loader import PluginLoader, get_plugin_directory
 from src.ui.main_window import MainWindow
 
 VERSION = "1.0.0"
@@ -56,6 +56,42 @@ def check_update(parent):
     QMessageBox.information(parent, "检查更新", f"当前版本: {VERSION}\n\n已是最新版本，无需更新。")
 
 
+def load_plugins(window: MainWindow):
+    """加载并注册所有插件"""
+    plugin_dir = get_plugin_directory()
+    loader = PluginLoader(plugin_dir)
+    plugins = loader.load_all_plugins()
+
+    for plugin in plugins:
+        window.add_tool(plugin.name, plugin)
+
+        plugin.setStyleSheet("""
+            QWidget {
+                font-size: 16px;
+            }
+            QGroupBox {
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QLabel {
+                font-size: 16px;
+            }
+            QComboBox {
+                font-size: 16px;
+                padding: 8px;
+            }
+            QTextEdit {
+                font-size: 16px;
+            }
+            QPushButton {
+                font-size: 16px;
+                font-weight: bold;
+            }
+        """)
+
+        plugin.on_activate()
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
@@ -72,34 +108,7 @@ if __name__ == "__main__":
     about_action = help_menu.addAction("关于")
     about_action.triggered.connect(lambda: show_about_dialog(window))
 
-    # check_update_action = help_menu.addAction("检查更新")
-    # check_update_action.triggered.connect(lambda: check_update(window))
-
-    work_order_tool = WorkOrderTool()
-    work_order_tool.setStyleSheet("""
-        QWidget {
-            font-size: 16px;
-        }
-        QGroupBox {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        QLabel {
-            font-size: 16px;
-        }
-        QComboBox {
-            font-size: 16px;
-            padding: 8px;
-        }
-        QTextEdit {
-            font-size: 16px;
-        }
-        QPushButton {
-            font-size: 16px;
-            font-weight: bold;
-        }
-    """)
-    window.add_tool("回头看工单", work_order_tool)
+    load_plugins(window)
 
     window.show()
 
