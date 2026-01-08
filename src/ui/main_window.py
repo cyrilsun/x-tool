@@ -93,6 +93,29 @@ class MainWindow(QMainWindow):
             QTreeWidget#toolList QTreeWidgetItem {
                 margin-bottom: 2px;
             }
+            /* 优化文件夹展开/折叠指示器样式 */
+            QTreeWidget#toolList::branch {
+                background-color: white;
+            }
+            QTreeWidget#toolList::branch:has-siblings:!adjoins-item {
+                border-image: none;
+                background-color: white;
+            }
+            QTreeWidget#toolList::branch:has-siblings:adjoins-item {
+                border-image: none;
+                background-color: white;
+            }
+            QTreeWidget#toolList::branch:!has-children:!has-siblings:adjoins-item {
+                border-image: none;
+                background-color: white;
+            }
+            /* 展开指示器颜色 */
+            QTreeWidget#toolList::branch:open {
+                background-color: white;
+            }
+            QTreeWidget#toolList::branch:closed {
+                background-color: white;
+            }
         """)
         
         # 设置拖放功能
@@ -205,6 +228,10 @@ class MainWindow(QMainWindow):
         # 添加到工具列表（默认添加到根目录）
         item = QTreeWidgetItem([name])
         item.setFont(0, QFont("Microsoft YaHei", 10))
+        
+        # 使用Unicode字符作为插件图标，与文件夹形成区分
+        item.setText(0, "🔧 " + name)
+        
         item.setData(0, Qt.ItemDataRole.UserRole, {
             "type": "tool",
             "name": name
@@ -248,7 +275,13 @@ class MainWindow(QMainWindow):
             folder_item = QTreeWidgetItem([folder_name])
             self.tool_list_widget.addTopLevelItem(folder_item)  # 显式添加到顶层
         
+        # 设置文件夹样式
         folder_item.setFont(0, QFont("Microsoft YaHei", 10, QFont.Weight.Bold))
+        folder_item.setForeground(0, Qt.GlobalColor.darkBlue)  # 文件夹名称使用深蓝色
+        
+        # 使用Unicode字符作为文件夹图标
+        folder_item.setText(0, "📁 " + folder_name)
+        
         folder_item.setData(0, Qt.ItemDataRole.UserRole, {
             "type": "folder",
             "name": folder_name,
@@ -263,6 +296,10 @@ class MainWindow(QMainWindow):
         # 添加到文件夹下
         item = QTreeWidgetItem(folder_item, [tool_name])
         item.setFont(0, QFont("Microsoft YaHei", 10))
+        
+        # 使用Unicode字符作为插件图标，与文件夹形成区分
+        item.setText(0, "🔧 " + tool_name)
+        
         item.setData(0, Qt.ItemDataRole.UserRole, {
             "type": "tool",
             "name": tool_name
@@ -373,8 +410,13 @@ class MainWindow(QMainWindow):
         from src.db.database import Database
         db = Database()
         
-        # 获取当前文件夹名称
-        current_name = folder_item.text(0)
+        # 获取当前文件夹名称（移除图标）
+        current_display_name = folder_item.text(0)
+        # 检查并移除文件夹图标
+        if current_display_name.startswith("📁 "):
+            current_name = current_display_name[2:]
+        else:
+            current_name = current_display_name
         
         # 获取新文件夹名称
         new_name, ok = QInputDialog.getText(self, "编辑文件夹名称", "请输入新的文件夹名称:", text=current_name)
@@ -395,8 +437,8 @@ class MainWindow(QMainWindow):
                 # 更新数据库
                 db.update_folder_name(folder_id, new_name)
                 
-                # 更新界面
-                folder_item.setText(0, new_name)
+                # 更新界面，保留文件夹图标
+                folder_item.setText(0, "📁 " + new_name)
                 
                 # 更新用户数据
                 item_data = folder_item.data(0, Qt.ItemDataRole.UserRole)
