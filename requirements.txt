@@ -1,3 +1,5 @@
 PyQt6
 PyQt6-Qt6
 pymysql
+pandas>=2.0.0
+openpyxl>=3.1.0

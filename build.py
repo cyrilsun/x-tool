@@ -55,6 +55,8 @@ def build_macos(args):
         "--collect-data=src.plugins",
         "--hidden-import=pymysql",
         "--hidden-import=PyQt6",
+        "--hidden-import=pandas",
+        "--hidden-import=openpyxl",
         "--icon=icon.icns",
         "main.py"
     ]
@@ -83,6 +85,8 @@ def build_windows(args):
         "--collect-data=src.plugins",
         "--hidden-import=pymysql",
         "--hidden-import=PyQt6",
+        "--hidden-import=pandas",
+        "--hidden-import=openpyxl",
         "main.py"
     ]
     
@@ -110,6 +114,8 @@ def build_linux(args):
         "--collect-data=src.plugins",
         "--hidden-import=pymysql",
         "--hidden-import=PyQt6",
+        "--hidden-import=pandas",
+        "--hidden-import=openpyxl",
         "main.py"
     ]
     
