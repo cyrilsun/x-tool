@@ -11,7 +11,7 @@ from src.plugins.base_plugin import BasePlugin
 class ExcelMerger:
     """
     Excel合并工具类
-    用于将doc目录下的所有Excel文件合并成一个新的Excel文件
+    用于将doc文件夹下的所有Excel文件合并成一个新的Excel文件
     """
     
     def __init__(self, source_dir: str = "doc", output_dir: str = "merged", selected_files: Optional[List[str]] = None):
@@ -19,28 +19,28 @@ class ExcelMerger:
         初始化Excel合并器
         
         Args:
-            source_dir: 源Excel文件目录
-            output_dir: 合并后文件输出目录
+            source_dir: 源Excel文件文件夹
+            output_dir: 合并后文件输出文件夹
             selected_files: 用户选择的文件列表，如果提供则优先使用
         """
         self.source_dir = source_dir
         self.output_dir = output_dir
         self.selected_files = selected_files
         
-        # 确保输出目录存在
+        # 确保输出文件夹存在
         self._ensure_output_directory()
     
     def _ensure_output_directory(self):
-        """确保输出目录存在"""
+        """确保输出文件夹存在"""
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
-            print(f"创建输出目录: {self.output_dir}")
+            print(f"创建输出文件夹: {self.output_dir}")
     
     def get_excel_files(self) -> List[str]:
         """
         获取Excel文件列表
         如果提供了selected_files，则直接返回该列表
-        否则从源目录下查找所有Excel文件
+        否则从源文件夹下查找所有Excel文件
         
         Returns:
             List[str]: Excel文件路径列表
@@ -50,9 +50,9 @@ class ExcelMerger:
             print(f"使用用户选择的 {len(self.selected_files)} 个Excel文件")
             return self.selected_files
         
-        # 否则从源目录下查找所有Excel文件
+        # 否则从源文件夹下查找所有Excel文件
         if not os.path.exists(self.source_dir):
-            print(f"警告: 源目录 {self.source_dir} 不存在")
+            print(f"警告: 源文件夹 {self.source_dir} 不存在")
             return []
         
         # 查找所有Excel文件
@@ -66,7 +66,7 @@ class ExcelMerger:
         # 按文件名排序
         excel_files.sort()
         
-        print(f"在源目录中找到 {len(excel_files)} 个Excel文件")
+        print(f"在源文件夹中找到 {len(excel_files)} 个Excel文件")
         return excel_files
     
     def read_excel_file(self, file_path: str, header=0, merge_header_rows=False, header_rows=1, dtype=str) -> List[dict]:
@@ -558,7 +558,7 @@ class ExcelMergePlugin(BasePlugin):
     def __init__(self):
         super().__init__("表格合并", "合并多个Excel文件到一个文件或合并多个Sheet到一个Sheet")
 
-        self.source_path = ""  # 可以是文件路径或目录路径
+        self.source_path = ""  # 可以是文件路径或文件夹路径
         self.selected_files = None  # 保存用户选择的文件列表
         self.output_dir = ""
         self.merge_option = "single_sheet"  # "single_sheet", "multiple_sheets", 或 "single_file_sheets"
@@ -568,7 +568,7 @@ class ExcelMergePlugin(BasePlugin):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
 
-        source_group = QGroupBox("选择源目录/文件")
+        source_group = QGroupBox("选择源文件")
         source_group.setStyleSheet("""
             QGroupBox {
                 font-size: 16px;
@@ -589,7 +589,7 @@ class ExcelMergePlugin(BasePlugin):
         source_layout = QVBoxLayout()
 
         self.source_edit = QLineEdit()
-        self.source_edit.setPlaceholderText("请选择包含Excel文件的目标文件夹或Excel文件")
+        self.source_edit.setPlaceholderText("请选择Excel文件")
         self.source_edit.setStyleSheet("""
             QLineEdit {
                 padding: 8px;
@@ -600,7 +600,7 @@ class ExcelMergePlugin(BasePlugin):
         """)
         source_layout.addWidget(self.source_edit)
 
-        self.select_source_btn = QPushButton("选择目标文件夹/文件")
+        self.select_source_btn = QPushButton("选择源文件")
         self.select_source_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
@@ -620,7 +620,7 @@ class ExcelMergePlugin(BasePlugin):
         source_group.setLayout(source_layout)
         layout.addWidget(source_group)
 
-        output_group = QGroupBox("选择输出目录")
+        output_group = QGroupBox("选择输出文件夹")
         output_group.setStyleSheet("""
             QGroupBox {
                 font-size: 16px;
@@ -641,7 +641,7 @@ class ExcelMergePlugin(BasePlugin):
         output_layout = QVBoxLayout()
 
         self.output_edit = QLineEdit()
-        self.output_edit.setPlaceholderText("请选择输出目录")
+        self.output_edit.setPlaceholderText("请选择输出文件夹")
         self.output_edit.setStyleSheet("""
             QLineEdit {
                 padding: 8px;
@@ -652,7 +652,7 @@ class ExcelMergePlugin(BasePlugin):
         """)
         output_layout.addWidget(self.output_edit)
 
-        self.select_output_btn = QPushButton("选择输出目录")
+        self.select_output_btn = QPushButton("选择输出文件夹")
         self.select_output_btn.setStyleSheet("""
             QPushButton {
                 background-color: #9b59b6;
@@ -902,7 +902,7 @@ class ExcelMergePlugin(BasePlugin):
         )
         
         if file_paths:
-            # 如果选择了多个文件，使用第一个文件的目录作为源目录
+            # 如果选择了多个文件，使用第一个文件的文件夹作为源文件夹
             # 并将所有选择的文件保存下来
             self.source_path = os.path.dirname(file_paths[0])
             self.selected_files = file_paths
@@ -917,7 +917,7 @@ class ExcelMergePlugin(BasePlugin):
         # 如果没有选择文件，尝试选择文件夹
         dir_path = QFileDialog.getExistingDirectory(
             self,
-            "选择目标文件夹",
+            "选择源文件夹",
             ""
         )
         
@@ -929,7 +929,7 @@ class ExcelMergePlugin(BasePlugin):
     def select_output_dir(self):
         dir_path = QFileDialog.getExistingDirectory(
             self,
-            "选择输出目录",
+            "选择输出文件夹",
             ""
         )
         if dir_path:
@@ -944,11 +944,11 @@ class ExcelMergePlugin(BasePlugin):
 
     def merge_files(self):
         if not self.source_path:
-            QMessageBox.warning(self, "警告", "请先选择目标文件夹或Excel文件")
+            QMessageBox.warning(self, "警告", "请先选择源Excel文件")
             return
 
         if not self.output_dir:
-            QMessageBox.warning(self, "警告", "请先选择输出目录")
+            QMessageBox.warning(self, "警告", "请先选择输出文件夹")
             return
 
         merge_option_text = self.merge_combo.currentText()
@@ -960,13 +960,13 @@ class ExcelMergePlugin(BasePlugin):
             self.merge_option = "single_file_sheets"
 
         try:
-            # 确定源目录
+            # 确定源文件夹
             source_dir = self.source_path
             if self.selected_files:
-                # 如果选择了文件，使用第一个文件的目录
+                # 如果选择了文件，使用第一个文件的文件夹
                 source_dir = os.path.dirname(self.selected_files[0])
             elif os.path.isfile(self.source_path):
-                # 如果源路径是单个文件，使用其目录
+                # 如果源路径是单个文件，使用其文件夹
                 source_dir = os.path.dirname(self.source_path)
                 # 将单个文件添加到选择列表
                 self.selected_files = [self.source_path]
@@ -1019,7 +1019,7 @@ class ExcelMergePlugin(BasePlugin):
                               f"总列数: {result['total_columns']} 列\n"\
                               f"\n"\
                               f"输出文件: {os.path.basename(result['output_path'])} \n"\
-                              f"输出目录: {self.output_dir}"
+                              f"输出文件夹: {self.output_dir}"
                 elif self.merge_option == "multiple_sheets":
                     message = f"合并完成！\n"\
                               f"\n"\
@@ -1032,7 +1032,7 @@ class ExcelMergePlugin(BasePlugin):
                               f"生成工作表数: {result['total_sheets']} 个\n"\
                               f"\n"\
                               f"输出文件: {os.path.basename(result['output_path'])} \n"\
-                              f"输出目录: {self.output_dir}"
+                              f"输出文件夹: {self.output_dir}"
                 else:
                     message = f"合并完成！\n"\
                               f"\n"\
@@ -1044,7 +1044,7 @@ class ExcelMergePlugin(BasePlugin):
                               f"合并结果:\n"\
                               f"生成文件数: {len(result['output_files'])} 个\n"\
                               f"\n"\
-                              f"输出目录: {self.output_dir}"
+                              f"输出文件夹: {self.output_dir}"
                 
                 QMessageBox.information(
                     self,
@@ -1068,11 +1068,11 @@ class ExcelMergePlugin(BasePlugin):
         预览合并后的表头效果
         """
         if not self.source_path:
-            QMessageBox.warning(self, "警告", "请先选择目标文件夹或Excel文件")
+            QMessageBox.warning(self, "警告", "请先选择源Excel文件")
             return
 
         try:
-            # 确定源目录和选择的文件
+            # 确定源文件夹和选择的文件
             source_dir = self.source_path
             selected_files = self.selected_files
             if selected_files:
