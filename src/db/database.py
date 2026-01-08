@@ -36,9 +36,19 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 parent_id INTEGER,
+                sort_order INTEGER DEFAULT 0,
                 UNIQUE(name, COALESCE(parent_id, -1))
             )
         ''')
+        
+        # 添加sort_order列（如果不存在）
+        try:
+            cursor.execute("ALTER TABLE plugin_folders ADD COLUMN sort_order INTEGER DEFAULT 0")
+            conn.commit()
+        except sqlite3.OperationalError as e:
+            # 如果列已存在，忽略错误
+            if "duplicate column name" not in str(e):
+                raise
         
         # 创建插件与文件夹关联表
         cursor.execute('''
@@ -46,9 +56,19 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 plugin_name TEXT NOT NULL,
                 folder_id INTEGER,
+                sort_order INTEGER DEFAULT 0,
                 UNIQUE(plugin_name)
             )
         ''')
+        
+        # 添加sort_order列（如果不存在）
+        try:
+            cursor.execute("ALTER TABLE plugin_folder_associations ADD COLUMN sort_order INTEGER DEFAULT 0")
+            conn.commit()
+        except sqlite3.OperationalError as e:
+            # 如果列已存在，忽略错误
+            if "duplicate column name" not in str(e):
+                raise
         
         conn.commit()
         conn.close()
@@ -82,10 +102,21 @@ class Database:
         """添加文件夹"""
         conn = self.get_connection()
         cursor = conn.cursor()
+        
+        # 获取当前父文件夹下的最大排序值
         cursor.execute(
-            "INSERT INTO plugin_folders (name, parent_id) VALUES (?, ?)",
-            (name, parent_id)
+            "SELECT MAX(sort_order) FROM plugin_folders WHERE parent_id = ?",
+            (parent_id,)
         )
+        result = cursor.fetchone()
+        next_sort_order = result[0] + 1 if result[0] is not None else 0
+        
+        # 插入新文件夹
+        cursor.execute(
+            "INSERT INTO plugin_folders (name, parent_id, sort_order) VALUES (?, ?, ?)",
+            (name, parent_id, next_sort_order)
+        )
+        
         folder_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -120,53 +151,87 @@ class Database:
         conn.close()
     
     def get_all_folders(self):
-        """获取所有文件夹"""
+        """获取所有文件夹，按parent_id和sort_order排序"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, parent_id FROM plugin_folders")
+        cursor.execute("SELECT id, name, parent_id, sort_order FROM plugin_folders ORDER BY parent_id, sort_order")
         folders = cursor.fetchall()
         conn.close()
         return folders
     
     def get_folder_plugins(self, folder_id):
-        """获取文件夹下的所有插件"""
+        """获取文件夹下的所有插件及其排序顺序"""
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT plugin_name FROM plugin_folder_associations WHERE folder_id = ?",
+            "SELECT plugin_name, sort_order FROM plugin_folder_associations WHERE folder_id = ? ORDER BY sort_order",
             (folder_id,)
         )
-        plugins = [row[0] for row in cursor.fetchall()]
+        plugins = [(row[0], row[1]) for row in cursor.fetchall()]
         conn.close()
         return plugins
     
     def associate_plugin_with_folder(self, plugin_name, folder_id):
-        """关联插件与文件夹"""
+        """关联插件与文件夹，并设置排序顺序"""
         conn = self.get_connection()
         cursor = conn.cursor()
+        
+        # 获取当前文件夹下的最大排序值
         cursor.execute(
-            "INSERT OR REPLACE INTO plugin_folder_associations (plugin_name, folder_id) VALUES (?, ?)",
-            (plugin_name, folder_id)
+            "SELECT MAX(sort_order) FROM plugin_folder_associations WHERE folder_id = ?",
+            (folder_id,)
+        )
+        result = cursor.fetchone()
+        next_sort_order = result[0] + 1 if result[0] is not None else 0
+        
+        # 插入或更新关联记录
+        cursor.execute(
+            "INSERT OR REPLACE INTO plugin_folder_associations (plugin_name, folder_id, sort_order) VALUES (?, ?, ?)",
+            (plugin_name, folder_id, next_sort_order)
         )
         conn.commit()
         conn.close()
     
     def get_plugin_folder(self, plugin_name):
-        """获取插件所在的文件夹"""
+        """获取插件所在的文件夹和排序顺序"""
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT folder_id FROM plugin_folder_associations WHERE plugin_name = ?",
+            "SELECT folder_id, sort_order FROM plugin_folder_associations WHERE plugin_name = ?",
             (plugin_name,)
         )
         result = cursor.fetchone()
         conn.close()
-        return result[0] if result else None
+        if result:
+            return result[0], result[1]  # 返回folder_id和sort_order
+        return None, 0  # 默认返回None和0
     
     def remove_plugin_from_folder(self, plugin_name):
         """移除插件与文件夹的关联"""
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE plugin_folder_associations SET folder_id = NULL WHERE plugin_name = ?", (plugin_name,))
+        conn.commit()
+        conn.close()
+    
+    def update_folder_sort_order(self, folder_id, sort_order):
+        """更新文件夹排序顺序"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE plugin_folders SET sort_order = ? WHERE id = ?",
+            (sort_order, folder_id)
+        )
+        conn.commit()
+        conn.close()
+    
+    def update_plugin_sort_order(self, plugin_name, sort_order):
+        """更新插件排序顺序"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE plugin_folder_associations SET sort_order = ? WHERE plugin_name = ?",
+            (sort_order, plugin_name)
+        )
         conn.commit()
         conn.close()

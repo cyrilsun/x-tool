@@ -99,40 +99,68 @@ def load_plugins(window: MainWindow):
     # 加载文件夹结构
     window._load_folder_structure(db)
     
-    # 加载插件到对应文件夹或根目录
-    for plugin_name, plugin in plugin_map.items():
-        folder_id = db.get_plugin_folder(plugin_name)
+    # 获取所有插件的文件夹关联和排序顺序
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    plugin_associations = cursor.execute(
+        "SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations"
+    ).fetchall()
+    conn.close()
+    
+    # 按folder_id和sort_order分组
+    plugins_by_folder = {}
+    for plugin_name, folder_id, sort_order in plugin_associations:
+        if folder_id not in plugins_by_folder:
+            plugins_by_folder[folder_id] = []
+        plugins_by_folder[folder_id].append((plugin_name, sort_order))
+    
+    # 按排序顺序加载根目录插件
+    root_plugins = sorted(plugins_by_folder.get(None, []), key=lambda x: x[1])
+    for plugin_name, sort_order in root_plugins:
+        if plugin_name in plugin_map:
+            window.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
+    
+    # 按排序顺序加载文件夹内的插件
+    for folder_id, plugin_list in plugins_by_folder.items():
+        if folder_id is None:
+            continue  # 根目录插件已经处理过了
         
-        if folder_id:
-            # 找到对应的文件夹项
-            folder_item = None
+        # 找到对应的文件夹项
+        folder_item = None
+        
+        # 递归遍历所有项，查找匹配的folder_id
+        def find_folder_item(item):
+            nonlocal folder_item
+            if not item or folder_item:
+                return
             
-            # 递归遍历所有项，查找匹配的folder_id
-            def find_folder_item(item):
-                nonlocal folder_item
-                if not item or folder_item:
-                    return
-                
-                item_data = item.data(0, Qt.ItemDataRole.UserRole)
-                if item_data and item_data.get("type") == "folder" and item_data.get("folder_id") == folder_id:
-                    folder_item = item
-                    return
-                
-                for i in range(item.childCount()):
-                    find_folder_item(item.child(i))
+            item_data = item.data(0, Qt.ItemDataRole.UserRole)
+            if item_data and item_data.get("type") == "folder" and item_data.get("folder_id") == folder_id:
+                folder_item = item
+                return
             
-            # 先检查顶层项
-            for i in range(window.tool_list_widget.topLevelItemCount()):
-                find_folder_item(window.tool_list_widget.topLevelItem(i))
-            
-            if folder_item:
-                # 添加到文件夹中
-                window.add_tool_to_folder(plugin_name, plugin, folder_item)
-            else:
-                # 文件夹不存在，添加到根目录
-                window.add_tool(plugin_name, plugin)
+            for i in range(item.childCount()):
+                find_folder_item(item.child(i))
+        
+        # 先检查顶层项
+        for i in range(window.tool_list_widget.topLevelItemCount()):
+            find_folder_item(window.tool_list_widget.topLevelItem(i))
+        
+        if folder_item:
+            # 按排序顺序添加插件到文件夹中
+            sorted_plugins = sorted(plugin_list, key=lambda x: x[1])
+            for plugin_name, sort_order in sorted_plugins:
+                if plugin_name in plugin_map:
+                    window.add_tool_to_folder(plugin_name, plugin_map[plugin_name], folder_item, sort_order)
         else:
-            # 没有文件夹关联，添加到根目录
+            # 文件夹不存在，将插件添加到根目录
+            for plugin_name, sort_order in plugin_list:
+                if plugin_name in plugin_map:
+                    window.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
+    
+    # 加载没有关联的插件
+    for plugin_name, plugin in plugin_map.items():
+        if not any(plugin_name == p[0] for folder_plugins in plugins_by_folder.values() for p in folder_plugins):
             window.add_tool(plugin_name, plugin)
     
     # 默认显示欢迎页面

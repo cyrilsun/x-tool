@@ -3,6 +3,25 @@ from PyQt6.QtWidgets import QMainWindow, QSplitter, QWidget, QVBoxLayout, QHBoxL
 from PyQt6.QtCore import Qt, QMimeData, QPoint, QCoreApplication
 from PyQt6.QtGui import QFont, QPixmap, QDrag, QCursor
 
+# 自定义TreeWidget类，用于处理拖拽事件
+class CustomTreeWidget(QTreeWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+    
+    def dropEvent(self, event):
+        # 调用父类的dropEvent来处理实际的移动
+        super().dropEvent(event)
+        
+        # 通知父窗口保存排序顺序
+        if hasattr(self.parent_window, '_save_folder_sort_order'):
+            from src.db.database import Database
+            db = Database()
+            try:
+                self.parent_window._save_folder_sort_order(db)
+            except Exception as e:
+                print(f"保存文件夹排序失败: {e}")
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -63,7 +82,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.splitter)
 
         # 创建左侧工具列表（树形结构）
-        self.tool_list_widget = QTreeWidget()
+        self.tool_list_widget = CustomTreeWidget(self)
         self.tool_list_widget.setMinimumWidth(220)
         self.tool_list_widget.setMaximumWidth(300)
         self.tool_list_widget.setObjectName("toolList")
@@ -223,7 +242,7 @@ class MainWindow(QMainWindow):
             self.tool_stack_widget.removeWidget(welcome_page)
             welcome_page.deleteLater()
 
-    def add_tool(self, name, widget):
+    def add_tool(self, name, widget, sort_order=None):
         """添加工具到列表和堆栈"""
         # 添加到工具列表（默认添加到根目录）
         item = QTreeWidgetItem([name])
@@ -236,7 +255,14 @@ class MainWindow(QMainWindow):
             "type": "tool",
             "name": name
         })
-        self.tool_list_widget.addTopLevelItem(item)
+        
+        # 如果指定了排序顺序，调整项目位置
+        if sort_order is not None and sort_order < self.tool_list_widget.topLevelItemCount():
+            self.tool_list_widget.addTopLevelItem(item)
+            self.tool_list_widget.takeTopLevelItem(self.tool_list_widget.indexOfTopLevelItem(item))
+            self.tool_list_widget.insertTopLevelItem(sort_order, item)
+        else:
+            self.tool_list_widget.addTopLevelItem(item)
 
         # 保存插件与widget的映射
         self.plugin_widget_map[name] = widget
@@ -292,7 +318,7 @@ class MainWindow(QMainWindow):
         
         return folder_item
 
-    def add_tool_to_folder(self, tool_name, widget, folder_item):
+    def add_tool_to_folder(self, tool_name, widget, folder_item, sort_order=None):
         """添加工具到指定文件夹"""
         # 添加到文件夹下
         item = QTreeWidgetItem(folder_item, [tool_name])
@@ -305,6 +331,11 @@ class MainWindow(QMainWindow):
             "type": "tool",
             "name": tool_name
         })
+        
+        # 如果指定了排序顺序，调整项目位置
+        if sort_order is not None and sort_order < folder_item.childCount():
+            folder_item.removeChild(item)
+            folder_item.insertChild(sort_order, item)
         
         # 保存插件与widget的映射
         self.plugin_widget_map[tool_name] = widget
@@ -492,70 +523,98 @@ class MainWindow(QMainWindow):
     
     def dragMoveEvent(self, event):
         """拖动移动事件"""
-        # 只接受工具到文件夹的拖动
-        item = self.tool_list_widget.itemAt(event.pos())
-        if not item:
-            event.ignore()
-            return
-        
-        item_data = item.data(0, Qt.ItemDataRole.UserRole)
-        if not item_data:
-            event.ignore()
-            return
-        
-        # 只允许拖到文件夹上
-        if item_data.get("type") == "folder":
-            event.accept()
-        else:
-            event.ignore()
+        # 允许文件夹之间的排序和工具到文件夹的拖动
+        event.accept()
     
-    def dropEvent(self, event):
-        """放置事件"""
-        # 获取拖动的项目
-        dragged_item = self.tool_list_widget.currentItem()
-        if not dragged_item:
-            event.ignore()
-            return
-        
-        dragged_data = dragged_item.data(0, Qt.ItemDataRole.UserRole)
-        if not dragged_data or dragged_data.get("type") != "tool":
-            event.ignore()
-            return
-        
-        # 获取目标文件夹
-        target_item = self.tool_list_widget.itemAt(event.pos())
-        if not target_item:
-            event.ignore()
-            return
-        
-        target_data = target_item.data(0, Qt.ItemDataRole.UserRole)
-        if not target_data or target_data.get("type") != "folder":
-            event.ignore()
-            return
-        
+    def on_item_moved(self, item, old_parent, old_index, new_parent, new_index):
+        """处理项目移动事件，保存文件夹排序顺序"""
         # 从数据库模块导入Database类
         from src.db.database import Database
         db = Database()
         
         try:
-            # 获取工具名称和文件夹ID
-            tool_name = dragged_data.get("name")
-            target_data = target_item.data(0, Qt.ItemDataRole.UserRole)
-            folder_id = target_data.get("folder_id") if target_data else None
-            
-            if folder_id:
-                # 更新数据库关联
-                db.associate_plugin_with_folder(tool_name, folder_id)
-                
-                # 更新插件文件夹映射
-                self.plugin_folder_map[tool_name] = folder_id
-            
-            # 移动项目
-            super().dropEvent(event)
-            
+            # 更新所有文件夹的排序顺序
+            self._save_folder_sort_order(db)
         except Exception as e:
-            print(f"拖放操作失败: {e}")
-            event.ignore()
+            print(f"保存文件夹排序失败: {e}")
+    
+    def _update_plugin_folder_association(self, db, plugin_name, item):
+        """更新插件与文件夹的关联"""
+        parent = item.parent()
+        if parent:
+            # 插件在文件夹内
+            parent_data = parent.data(0, Qt.ItemDataRole.UserRole)
+            if parent_data and parent_data.get("type") == "folder":
+                folder_id = parent_data.get("folder_id")
+                if folder_id:
+                    # 更新插件的文件夹关联和排序顺序
+                    # 获取插件在新文件夹中的索引
+                    sort_order = parent.indexOfChild(item)
+                    print(f"插件 {plugin_name} 被拖拽到文件夹 {parent_data.get('name')}，新排序: {sort_order}")
+                    # 更新数据库中的文件夹关联和排序顺序
+                    conn = db.get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE plugin_folder_associations SET folder_id = ?, sort_order = ? WHERE plugin_name = ?",
+                        (folder_id, sort_order, plugin_name)
+                    )
+                    conn.commit()
+                    conn.close()
+        else:
+            # 插件在根目录
+            # 更新插件排序顺序
+            sort_order = self.tool_list_widget.indexOfTopLevelItem(item)
+            if sort_order >= 0:
+                # 先确保插件与根目录关联
+                db.associate_plugin_with_folder(plugin_name, None)
+                # 然后更新排序顺序
+                db.update_plugin_sort_order(plugin_name, sort_order)
+
+    def _save_folder_sort_order(self, db):
+        """保存所有文件夹和工具的排序顺序到数据库"""
+        print("开始保存文件夹和插件排序顺序...")
+        
+        # 遍历顶层项目，更新文件夹和工具的排序顺序
+        for i in range(self.tool_list_widget.topLevelItemCount()):
+            item = self.tool_list_widget.topLevelItem(i)
+            item_data = item.data(0, Qt.ItemDataRole.UserRole)
+            
+            if item_data:
+                if item_data.get("type") == "folder":
+                    folder_id = item_data.get("folder_id")
+                    if folder_id:
+                        print(f"更新文件夹排序: {item_data.get('name')} (ID: {folder_id}) -> 排序: {i}")
+                        db.update_folder_sort_order(folder_id, i)
+                        
+                        # 遍历文件夹内的项目，更新其排序顺序
+                        for j in range(item.childCount()):
+                            child_item = item.child(j)
+                            child_data = child_item.data(0, Qt.ItemDataRole.UserRole)
+                            
+                            if child_data:
+                                if child_data.get("type") == "folder":
+                                    child_folder_id = child_data.get("folder_id")
+                                    if child_folder_id:
+                                        print(f"更新子文件夹排序: {child_data.get('name')} (ID: {child_folder_id}) -> 排序: {j}")
+                                        db.update_folder_sort_order(child_folder_id, j)
+                                elif child_data.get("type") == "tool":
+                                    tool_name = child_data.get("name")
+                                    if tool_name:
+                                        print(f"更新文件夹内插件排序: {tool_name} -> 排序: {j}")
+                                        db.update_plugin_sort_order(tool_name, j)
+                                        
+                                        # 更新插件的文件夹关联
+                                        self._update_plugin_folder_association(db, tool_name, child_item)
+                elif item_data.get("type") == "tool":
+                    tool_name = item_data.get("name")
+                    if tool_name:
+                        print(f"更新根目录插件排序: {tool_name} -> 排序: {i}")
+                        db.update_plugin_sort_order(tool_name, i)
+                        
+                        # 更新插件的文件夹关联
+                        self._update_plugin_folder_association(db, tool_name, item)
+        
+        print("排序顺序保存完成!")
     
     def _load_folder_structure(self, db):
         """从数据库加载文件夹结构"""
@@ -564,17 +623,20 @@ class MainWindow(QMainWindow):
         
         # 按parent_id分组
         folders_by_parent = {}
-        for folder_id, name, parent_id in folders:
+        for folder_id, name, parent_id, sort_order in folders:
             if parent_id not in folders_by_parent:
                 folders_by_parent[parent_id] = []
-            folders_by_parent[parent_id].append((folder_id, name))
+            folders_by_parent[parent_id].append((folder_id, name, sort_order))
         
         # 递归创建文件夹结构
         def create_folder_tree(parent_id, parent_item=None):
             if parent_id not in folders_by_parent:
                 return
             
-            for folder_id, name in folders_by_parent[parent_id]:
+            # 按sort_order排序文件夹
+            sorted_folders = sorted(folders_by_parent[parent_id], key=lambda x: x[2])
+            
+            for folder_id, name, _ in sorted_folders:
                 # 创建文件夹项
                 folder_item = self.add_folder(name, parent_item, folder_id)
                 
