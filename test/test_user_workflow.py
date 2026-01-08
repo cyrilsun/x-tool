@@ -9,7 +9,7 @@ print("=== 用户操作流程模拟测试 ===")
 
 # 步骤 1: 用户获取源文件
 print("\n1. 用户获取源文件 huitoukan_plugin.py")
-source_file = "/Users/sunxiaogang/study/pyproject/pyqt/x-tool/src/plugins/bak/huitoukan_plugin.py"
+source_file = "/src/plugins/bak/huitoukan_plugin.py"
 if os.path.exists(source_file):
     print(f"   ✓ 源文件存在: {source_file}")
 else:
@@ -18,7 +18,7 @@ else:
 
 # 步骤 2: 用户使用 PycCompilerPlugin 编译文件
 print("\n2. 用户使用 PycCompilerPlugin 编译文件")
-plugins_dir = "/Users/sunxiaogang/study/pyproject/pyqt/x-tool/plugins"
+plugins_dir = "/plugins"
 pyc_file = os.path.join(plugins_dir, "huitoukan_plugin.pyc")
 
 try:

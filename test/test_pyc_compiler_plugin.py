@@ -4,7 +4,7 @@ import tempfile
 import shutil
 
 # 添加项目根目录到Python路径
-sys.path.append('/Users/sunxiaogang/study/pyproject/pyqt/x-tool')
+sys.path.append('/')
 
 from src.plugins.plugin_loader import PluginLoader, load_pyc_module
 

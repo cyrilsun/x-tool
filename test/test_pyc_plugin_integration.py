@@ -10,8 +10,8 @@ from src.plugins.plugin_loader import PluginLoader, load_pyc_module
 app = QApplication([])
 
 # 源文件和输出目录
-test_file = "/Users/sunxiaogang/study/pyproject/pyqt/x-tool/src/plugins/bak/huitoukan_plugin.py"
-output_dir = "/Users/sunxiaogang/study/pyproject/pyqt/x-tool/plugins"
+test_file = "/src/plugins/bak/huitoukan_plugin.py"
+output_dir = "/plugins"
 pyc_file = os.path.join(output_dir, "huitoukan_plugin.pyc")
 
 print("集成测试 1: 使用 PycCompilerPlugin 代码进行编译")

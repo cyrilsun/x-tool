@@ -5,7 +5,7 @@ import tempfile
 from PyQt6.QtWidgets import QApplication
 
 # 添加项目根目录到Python路径
-sys.path.append('/Users/sunxiaogang/study/pyproject/pyqt/x-tool')
+sys.path.append('/')
 
 from src.plugins.plugin_loader import PluginLoader, get_plugin_directory
 

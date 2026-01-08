@@ -4,7 +4,7 @@ import py_compile
 import importlib.util
 
 # 添加项目根目录到Python路径
-sys.path.append('/Users/sunxiaogang/study/pyproject/pyqt/x-tool')
+sys.path.append('/')
 
 
 def test_simple_pyc_load():

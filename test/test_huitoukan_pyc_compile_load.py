@@ -5,8 +5,8 @@ import importlib.util
 from src.plugins.base_plugin import BasePlugin
 
 # 测试文件路径
-test_file = "/Users/sunxiaogang/study/pyproject/pyqt/x-tool/src/plugins/bak/huitoukan_plugin.py"
-output_dir = "/Users/sunxiaogang/study/pyproject/pyqt/x-tool/plugins"
+test_file = "/src/plugins/bak/huitoukan_plugin.py"
+output_dir = "/plugins"
 pyc_file = os.path.join(output_dir, "huitoukan_plugin.pyc")
 
 print("测试步骤 1: 编译 huitoukan_plugin.py 为 .pyc 文件")

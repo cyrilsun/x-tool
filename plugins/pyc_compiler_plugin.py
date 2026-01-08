@@ -8,7 +8,7 @@ from src.plugins.base_plugin import BasePlugin
 
 class PycCompilerPlugin(BasePlugin):
     def __init__(self):
-        super().__init__("Py转Pyc", "将Python文件编译为字节码文件")
+        super().__init__("Python转Pyc", "将Python文件编译为字节码文件")
 
         self.py_files = []
         self.output_dir = ""

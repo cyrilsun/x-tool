@@ -3,13 +3,13 @@ import os
 import py_compile
 
 # 添加项目根目录到Python路径
-sys.path.append('/Users/sunxiaogang/study/pyproject/pyqt/x-tool')
+sys.path.append('/')
 
 print("测试Pyc插件加载功能")
 print("=" * 50)
 
 # 源文件路径
-source_file = '/Users/sunxiaogang/study/pyproject/pyqt/x-tool/test_plugin.py'
+source_file = '/test/test_plugin.py'
 # 目标pyc文件路径
 target_pyc = '/Users/sunxiaogang/study/pyproject/pyqt/x-tool/plugins/test_plugin.pyc'
 

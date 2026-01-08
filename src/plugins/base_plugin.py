@@ -1,5 +1,6 @@
+from abc import ABC, abstractmethod
+
 from PyQt6.QtWidgets import QWidget
-from abc import ABC, ABCMeta, abstractmethod
 
 
 class _BasePluginMeta(type(QWidget), type(ABC)):
