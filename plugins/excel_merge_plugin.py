@@ -3,7 +3,7 @@ import pandas as pd
 import glob
 from typing import List, Optional
 from datetime import datetime
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, QLineEdit, QComboBox
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, QLineEdit, QComboBox, QDialog, QTextEdit, QScrollArea, QCheckBox, QSpinBox, QWidget
 
 from src.plugins.base_plugin import BasePlugin
 
@@ -69,15 +69,19 @@ class ExcelMerger:
         print(f"在源目录中找到 {len(excel_files)} 个Excel文件")
         return excel_files
     
-    def read_excel_file(self, file_path: str) -> List[dict]:
+    def read_excel_file(self, file_path: str, header=0, merge_header_rows=False, header_rows=1, dtype=str) -> List[dict]:
         """
         读取单个Excel文件中的所有sheet
         
         Args:
             file_path: Excel文件路径
+            header: 表头行位置，0表示第一行，None表示无表头
+            merge_header_rows: 是否合并多行表头
+            header_rows: 表头行数，仅当merge_header_rows为True时有效
+            dtype: 数据类型，默认为str
             
         Returns:
-            List[dict]: 包含sheet名称和数据框的字典列表，格式为[{"sheet_name": str, "dataframe": pd.DataFrame}]
+            List[dict]: 包含sheet名称、数据框和表头信息的字典列表
         """
         try:
             # 获取文件中的所有sheet
@@ -89,12 +93,42 @@ class ExcelMerger:
             
             for sheet_name in sheet_names:
                 try:
-                    # 读取单个sheet，将所有列解析为字符串以避免长数字的科学计数法和精度丢失问题
-                    df = pd.read_excel(excel_file, sheet_name=sheet_name, dtype=str)
+                    if merge_header_rows and header_rows > 1:
+                        # 读取多行表头
+                        df_raw = pd.read_excel(excel_file, sheet_name=sheet_name, header=None, dtype=str)  # 强制使用str类型
+                        
+                        # 合并多行表头
+                        header_data = df_raw.iloc[:header_rows].fillna('')
+                        merged_headers = []
+                        for col_idx in range(header_data.shape[1]):
+                            header_parts = []
+                            for row_idx in range(header_rows):
+                                header_val = header_data.iloc[row_idx, col_idx]
+                                if header_val.strip():
+                                    header_parts.append(str(header_val))
+                            
+                            if header_parts:
+                                merged_header = ' '.join(header_parts)
+                            else:
+                                merged_header = f'Column_{col_idx}'
+                            merged_headers.append(merged_header)
+                        
+                        # 设置新的表头并跳过表头行
+                        df = df_raw.iloc[header_rows:].copy()
+                        df.columns = merged_headers
+                        
+                        # 确保所有列都是字符串类型
+                        df = df.astype(str)
+                    else:
+                        # 正常读取单个表头
+                        df = pd.read_excel(excel_file, sheet_name=sheet_name, header=header, dtype=dtype)
+                    
                     print(f"✓ 成功读取: {file_name} - {sheet_name} ({len(df)} 行)")
                     result.append({
                         "sheet_name": sheet_name,
-                        "dataframe": df
+                        "dataframe": df,
+                        "header_rows": header_rows if merge_header_rows else 1 if header is not None else 0,
+                        "headers": list(df.columns)
                     })
                 except Exception as e:
                     print(f"✗ 读取sheet失败: {file_name} - {sheet_name}, 错误: {str(e)}")
@@ -104,12 +138,20 @@ class ExcelMerger:
             print(f"✗ 读取文件失败: {os.path.basename(file_path)}, 错误: {str(e)}")
             return []
     
-    def merge_excel_files(self, output_filename: Optional[str] = None) -> dict:
+    def merge_excel_files(self, output_filename: Optional[str] = None, header=0, merge_header_rows=False, header_rows=1, header_mode="auto") -> dict:
         """
         合并所有Excel文件，将所有文件的所有sheet合并到同一个sheet
         
         Args:
             output_filename: 输出文件名，如果为None则自动生成
+            header: 表头行位置，0表示第一行，None表示无表头
+            merge_header_rows: 是否合并多行表头
+            header_rows: 表头行数，仅当merge_header_rows为True时有效
+            header_mode: 表头处理模式，可选值：
+                        "auto": 自动合并相同表头
+                        "first": 使用第一个sheet的表头
+                        "union": 使用所有表头的并集
+                        "intersection": 使用所有表头的交集
             
         Returns:
             dict: 包含合并结果的详细信息
@@ -139,13 +181,14 @@ class ExcelMerger:
         successful_files = 0
         failed_files = 0
         total_sheets = 0
+        headers_info = []
         
         # 读取所有Excel文件
         for i, file_path in enumerate(excel_files, 1):
             file_name = os.path.basename(file_path)
             print(f"[{i}/{len(excel_files)}] 处理: {file_name}")
             
-            sheets_data = self.read_excel_file(file_path)
+            sheets_data = self.read_excel_file(file_path, header=header, merge_header_rows=merge_header_rows, header_rows=header_rows)
             if sheets_data:
                 successful_files += 1
                 total_sheets += len(sheets_data)
@@ -154,6 +197,13 @@ class ExcelMerger:
                 for sheet_data in sheets_data:
                     df = sheet_data["dataframe"]
                     sheet_name = sheet_data["sheet_name"]
+                    
+                    # 记录表头信息
+                    headers_info.append({
+                        "file": file_name,
+                        "sheet": sheet_name,
+                        "headers": sheet_data["headers"]
+                    })
                     
                     # 添加来源文件和sheet信息列
                     df['来源文件'] = file_name
@@ -173,7 +223,38 @@ class ExcelMerger:
         try:
             # 合并所有数据框
             print(f"\n正在合并 {len(all_dataframes)} 个数据框（来自 {total_sheets} 个sheet）...")
-            merged_df = pd.concat(all_dataframes, ignore_index=True)
+            
+            # 根据表头模式处理数据框合并
+            if header_mode == "first":
+                # 使用第一个sheet的表头
+                first_columns = all_dataframes[0].columns
+                merged_df = pd.concat(
+                    [df.reindex(columns=first_columns) for df in all_dataframes], 
+                    ignore_index=True
+                )
+            elif header_mode == "intersection":
+                # 使用所有表头的交集
+                common_columns = set(all_dataframes[0].columns)
+                for df in all_dataframes[1:]:
+                    common_columns.intersection_update(df.columns)
+                common_columns = sorted(list(common_columns))
+                merged_df = pd.concat(
+                    [df[common_columns].reindex(columns=common_columns) for df in all_dataframes], 
+                    ignore_index=True
+                )
+            elif header_mode == "union":
+                # 使用所有表头的并集
+                all_columns = set()
+                for df in all_dataframes:
+                    all_columns.update(df.columns)
+                all_columns = sorted(list(all_columns))
+                merged_df = pd.concat(
+                    [df.reindex(columns=all_columns) for df in all_dataframes], 
+                    ignore_index=True
+                )
+            else:  # "auto" 模式
+                # 自动合并，使用默认的pd.concat行为（基于列名匹配）
+                merged_df = pd.concat(all_dataframes, ignore_index=True)
             
             # 保存合并后的文件
             merged_df.to_excel(output_path, index=False, engine='openpyxl')
@@ -212,12 +293,15 @@ class ExcelMerger:
                 "message": error_msg
             }
     
-    def merge_with_sheet_separation(self, output_filename: Optional[str] = None) -> dict:
+    def merge_with_sheet_separation(self, output_filename: Optional[str] = None, header=0, merge_header_rows=False, header_rows=1) -> dict:
         """
         合并Excel文件，每个源文件的每个sheet作为一个单独的工作表
         
         Args:
             output_filename: 输出文件名，如果为None则自动生成
+            header: 表头行位置，0表示第一行，None表示无表头
+            merge_header_rows: 是否合并多行表头
+            header_rows: 表头行数，仅当merge_header_rows为True时有效
             
         Returns:
             dict: 包含合并结果的详细信息
@@ -253,7 +337,7 @@ class ExcelMerger:
                     file_name = os.path.basename(file_path)
                     print(f"[{i}/{len(excel_files)}] 处理: {file_name}")
                     
-                    sheets_data = self.read_excel_file(file_path)
+                    sheets_data = self.read_excel_file(file_path, header=header, merge_header_rows=merge_header_rows, header_rows=header_rows)
                     if sheets_data:
                         successful_files += 1
                         
@@ -301,10 +385,20 @@ class ExcelMerger:
                 "message": error_msg
             }
     
-    def merge_single_file_sheets(self) -> dict:
+    def merge_single_file_sheets(self, header=0, merge_header_rows=False, header_rows=1, header_mode="auto") -> dict:
         """
         合并同一Excel文件中的多个sheet到一个新的Excel文件
         每个源文件生成一个对应的合并文件
+        
+        Args:
+            header: 表头行位置，0表示第一行，None表示无表头
+            merge_header_rows: 是否合并多行表头
+            header_rows: 表头行数，仅当merge_header_rows为True时有效
+            header_mode: 表头处理模式，可选值：
+                        "auto": 自动合并相同表头
+                        "first": 使用第一个sheet的表头
+                        "union": 使用所有表头的并集
+                        "intersection": 使用所有表头的交集
         
         Returns:
             dict: 包含合并结果的详细信息
@@ -333,7 +427,7 @@ class ExcelMerger:
             
             try:
                 # 读取文件中的所有sheet
-                sheets_data = self.read_excel_file(file_path)
+                sheets_data = self.read_excel_file(file_path, header=header, merge_header_rows=merge_header_rows, header_rows=header_rows)
                 if not sheets_data:
                     print(f"✗ 无法读取文件 {file_name} 中的任何sheet")
                     failed_files += 1
@@ -360,8 +454,38 @@ class ExcelMerger:
                     failed_files += 1
                     continue
                 
-                # 合并所有数据框
-                merged_df = pd.concat(all_dataframes, ignore_index=True)
+                # 根据表头模式处理数据框合并
+                if header_mode == "first":
+                    # 使用第一个sheet的表头
+                    first_columns = all_dataframes[0].columns
+                    merged_df = pd.concat(
+                        [df.reindex(columns=first_columns) for df in all_dataframes], 
+                        ignore_index=True
+                    )
+                elif header_mode == "intersection":
+                    # 使用所有表头的交集
+                    common_columns = set(all_dataframes[0].columns)
+                    for df in all_dataframes[1:]:
+                        common_columns.intersection_update(df.columns)
+                    common_columns = sorted(list(common_columns))
+                    merged_df = pd.concat(
+                        [df[common_columns].reindex(columns=common_columns) for df in all_dataframes], 
+                        ignore_index=True
+                    )
+                elif header_mode == "union":
+                    # 使用所有表头的并集
+                    all_columns = set()
+                    for df in all_dataframes:
+                        all_columns.update(df.columns)
+                    all_columns = sorted(list(all_columns))
+                    merged_df = pd.concat(
+                        [df.reindex(columns=all_columns) for df in all_dataframes], 
+                        ignore_index=True
+                    )
+                else:  # "auto" 模式
+                    # 自动合并，使用默认的pd.concat行为（基于列名匹配）
+                    merged_df = pd.concat(all_dataframes, ignore_index=True)
+                
                 file_columns = len(merged_df.columns)
                 
                 # 生成输出文件名
@@ -586,12 +710,92 @@ class ExcelMergePlugin(BasePlugin):
         """)
         option_layout.addWidget(self.merge_combo)
 
+        # 表头处理选项
+        header_group = QGroupBox("表头处理")
+        header_group.setStyleSheet("""
+            QGroupBox {
+                font-size: 14px;
+                font-weight: normal;
+                color: #34495e;
+                border: 1px solid #bdc3c7;
+                border-radius: 6px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+                font-weight: bold;
+            }
+        """)
+
+        header_layout = QVBoxLayout()
+
+        # 多行表头合并选项
+        self.merge_header_check = QCheckBox("合并多行表头")
+        self.merge_header_check.setStyleSheet("font-size: 13px;")
+        self.merge_header_check.stateChanged.connect(self.on_merge_header_changed)
+        header_layout.addWidget(self.merge_header_check)
+
+        # 表头行数选择
+        header_rows_layout = QHBoxLayout()
+        header_rows_label = QLabel("表头行数:")
+        header_rows_label.setStyleSheet("font-size: 13px;")
+        self.header_rows_spin = QSpinBox()
+        self.header_rows_spin.setRange(1, 5)
+        self.header_rows_spin.setValue(1)
+        self.header_rows_spin.setStyleSheet("font-size: 13px;")
+        self.header_rows_spin.setEnabled(False)  # 默认禁用，只有在合并多行表头时启用
+        header_rows_layout.addWidget(header_rows_label)
+        header_rows_layout.addWidget(self.header_rows_spin)
+        header_rows_layout.addStretch()
+        header_layout.addLayout(header_rows_layout)
+
+        # 表头处理模式
+        header_mode_layout = QHBoxLayout()
+        header_mode_label = QLabel("表头合并模式:")
+        header_mode_label.setStyleSheet("font-size: 13px;")
+        self.header_mode_combo = QComboBox()
+        self.header_mode_combo.addItem("自动合并", "auto")
+        self.header_mode_combo.addItem("使用第一个表头", "first")
+        self.header_mode_combo.addItem("合并所有表头", "union")
+        self.header_mode_combo.addItem("仅保留共同表头", "intersection")
+        self.header_mode_combo.setStyleSheet("font-size: 13px;")
+        header_mode_layout.addWidget(header_mode_label)
+        header_mode_layout.addWidget(self.header_mode_combo)
+        header_mode_layout.addStretch()
+        header_layout.addLayout(header_mode_layout)
+
+        header_group.setLayout(header_layout)
+        option_layout.addWidget(header_group)
+
         option_group.setLayout(option_layout)
         layout.addWidget(option_group)
 
         merge_layout = QHBoxLayout()
         merge_layout.addStretch()
 
+        # 预览按钮
+        self.preview_btn = QPushButton("预览表头")
+        self.preview_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                padding: 10px 24px;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        self.preview_btn.clicked.connect(self.preview_headers)
+        merge_layout.addWidget(self.preview_btn)
+        
+        # 合并按钮
         self.merge_btn = QPushButton("开始合并")
         self.merge_btn.setStyleSheet("""
             QPushButton {
@@ -655,6 +859,12 @@ class ExcelMergePlugin(BasePlugin):
         if dir_path:
             self.output_dir = dir_path
             self.output_edit.setText(dir_path)
+    
+    def on_merge_header_changed(self, state):
+        """
+        处理合并多行表头复选框状态变化
+        """
+        self.header_rows_spin.setEnabled(state == 2)  # 2表示选中状态
 
     def merge_files(self):
         if not self.source_path:
@@ -694,13 +904,29 @@ class ExcelMergePlugin(BasePlugin):
                 QMessageBox.warning(self, "警告", "没有找到Excel文件")
                 return
 
+            # 获取表头处理选项
+            merge_header = self.merge_header_check.isChecked()
+            header_rows = self.header_rows_spin.value()
+            header_mode = self.header_mode_combo.currentData()
+
             result = None
             if self.merge_option == "single_sheet":
-                result = merger.merge_excel_files()
+                result = merger.merge_excel_files(
+                    merge_header_rows=merge_header,
+                    header_rows=header_rows,
+                    header_mode=header_mode
+                )
             elif self.merge_option == "multiple_sheets":
-                result = merger.merge_with_sheet_separation()
+                result = merger.merge_with_sheet_separation(
+                    merge_header_rows=merge_header,
+                    header_rows=header_rows
+                )
             else:
-                result = merger.merge_single_file_sheets()
+                result = merger.merge_single_file_sheets(
+                    merge_header_rows=merge_header,
+                    header_rows=header_rows,
+                    header_mode=header_mode
+                )
 
             if result["success"]:
                 # 根据不同的合并选项生成不同的详细信息
@@ -760,6 +986,208 @@ class ExcelMergePlugin(BasePlugin):
 
     def on_activate(self):
         pass
+
+    def preview_headers(self):
+        """
+        预览合并后的表头效果
+        """
+        if not self.source_path:
+            QMessageBox.warning(self, "警告", "请先选择目标文件夹或Excel文件")
+            return
+
+        try:
+            # 确定源目录和选择的文件
+            source_dir = self.source_path
+            selected_files = self.selected_files
+            if selected_files:
+                source_dir = os.path.dirname(selected_files[0])
+            elif os.path.isfile(self.source_path):
+                source_dir = os.path.dirname(self.source_path)
+                selected_files = [self.source_path]
+
+            # 创建合并器实例
+            merger = ExcelMerger(source_dir, self.output_dir, selected_files)
+
+            # 获取统计信息
+            stats = merger.get_merge_statistics()
+            if stats["total_files"] == 0:
+                QMessageBox.warning(self, "警告", "没有找到Excel文件")
+                return
+
+            # 获取当前的表头处理设置
+            merge_header = self.merge_header_check.isChecked()
+            header_rows = self.header_rows_spin.value()
+            header_mode = self.header_mode_combo.currentData()
+
+            # 读取所有文件的表头信息
+            excel_files = merger.get_excel_files()
+            all_sheets_data_with_files = []
+            all_headers_info = []
+
+            for file_path in excel_files:
+                file_name = os.path.basename(file_path)
+                sheets_data = merger.read_excel_file(
+                    file_path, 
+                    header=0, 
+                    merge_header_rows=merge_header, 
+                    header_rows=header_rows
+                )
+                
+                for sheet_data in sheets_data:
+                    # 保存工作表数据及其所属文件路径
+                    all_sheets_data_with_files.append((sheet_data, file_path))
+                    all_headers_info.append({
+                        "file": file_name,
+                        "sheet": sheet_data["sheet_name"],
+                        "headers": sheet_data["headers"]
+                    })
+
+            if not all_sheets_data_with_files:
+                QMessageBox.warning(self, "警告", "没有成功读取任何Excel文件或sheet")
+                return
+
+            # 模拟表头合并逻辑，与merge_excel_files方法中的逻辑保持一致
+            all_dataframes = []
+            for sheet_data, file_path in all_sheets_data_with_files:
+                df = sheet_data["dataframe"]
+                # 添加来源信息列，与实际合并逻辑保持一致
+                df = df.copy()  # 创建副本以避免修改原始数据
+                df['来源文件'] = os.path.basename(file_path)
+                df['来源Sheet'] = sheet_data["sheet_name"]
+                all_dataframes.append(df)
+
+            # 根据表头模式处理合并预览
+            if header_mode == "first":
+                # 使用第一个sheet的表头
+                preview_columns = all_dataframes[0].columns
+            elif header_mode == "intersection":
+                # 使用所有表头的交集
+                common_columns = set(all_dataframes[0].columns)
+                for df in all_dataframes[1:]:
+                    common_columns.intersection_update(df.columns)
+                preview_columns = sorted(list(common_columns))
+            elif header_mode == "union":
+                # 使用所有表头的并集
+                all_columns = set()
+                for df in all_dataframes:
+                    all_columns.update(df.columns)
+                preview_columns = sorted(list(all_columns))
+            else:  # "auto" 模式
+                # 自动合并，使用默认的pd.concat行为（基于列名匹配）
+                # 这里我们只需要获取所有列的并集
+                all_columns = set()
+                for df in all_dataframes:
+                    all_columns.update(df.columns)
+                preview_columns = sorted(list(all_columns))
+
+            # 准备预览信息
+            preview_info = {
+                "header_mode": header_mode,
+                "merge_header": merge_header,
+                "header_rows": header_rows,
+                "total_files": stats["total_files"],
+                "total_sheets": len(all_sheets_data_with_files),
+                "original_headers": all_headers_info,
+                "merged_headers": preview_columns
+            }
+
+            # 显示预览对话框
+            self.show_header_preview_dialog(preview_info)
+
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"预览过程中发生错误: {str(e)}")
+
+    def show_header_preview_dialog(self, preview_info):
+        """
+        显示表头预览对话框
+        
+        Args:
+            preview_info: 包含预览信息的字典
+        """
+        # 创建对话框
+        dialog = QDialog(self)
+        dialog.setWindowTitle("表头预览")
+        dialog.setMinimumSize(600, 500)
+        
+        # 创建主布局
+        main_layout = QVBoxLayout(dialog)
+        
+        # 创建滚动区域
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        
+        # 创建内容小部件
+        content_widget = QWidget()
+        content_layout = QVBoxLayout(content_widget)
+        
+        # 预览设置信息
+        settings_group = QGroupBox("预览设置")
+        settings_layout = QVBoxLayout(settings_group)
+        
+        settings_text = QTextEdit()
+        settings_text.setReadOnly(True)
+        settings_text.setStyleSheet("font-family: monospace;")
+        
+        settings_content = f"""预览设置信息：
+- 表头合并模式: {self.header_mode_combo.currentText()}
+- 合并多行表头: {'是' if preview_info['merge_header'] else '否'}
+- 表头行数: {preview_info['header_rows']}
+- 源文件总数: {preview_info['total_files']} 个
+- 总Sheet数: {preview_info['total_sheets']} 个
+"""
+        
+        settings_text.setText(settings_content)
+        settings_layout.addWidget(settings_text)
+        content_layout.addWidget(settings_group)
+        
+        # 原始表头信息
+        original_group = QGroupBox("原始表头信息")
+        original_layout = QVBoxLayout(original_group)
+        
+        original_text = QTextEdit()
+        original_text.setReadOnly(True)
+        original_text.setStyleSheet("font-family: monospace;")
+        
+        original_content = ""
+        for idx, header_info in enumerate(preview_info['original_headers'], 1):
+            original_content += f"\n{idx}. 文件: {header_info['file']} | Sheet: {header_info['sheet']}\n"
+            original_content += f"   表头: {', '.join(header_info['headers'][:10])}{'...' if len(header_info['headers']) > 10 else ''}\n"
+        
+        original_text.setText(original_content)
+        original_layout.addWidget(original_text)
+        content_layout.addWidget(original_group)
+        
+        # 合并后的表头
+        merged_group = QGroupBox("合并后的表头效果")
+        merged_layout = QVBoxLayout(merged_group)
+        
+        merged_text = QTextEdit()
+        merged_text.setReadOnly(True)
+        merged_text.setStyleSheet("font-family: monospace;")
+        
+        merged_content = "合并后的表头: "
+        merged_content += ", ".join(preview_info['merged_headers'])
+        
+        merged_text.setText(merged_content)
+        merged_layout.addWidget(merged_text)
+        content_layout.addWidget(merged_group)
+        
+        # 添加内容到滚动区域
+        scroll_area.setWidget(content_widget)
+        main_layout.addWidget(scroll_area)
+        
+        # 添加关闭按钮
+        button_box = QHBoxLayout()
+        button_box.addStretch()
+        
+        close_button = QPushButton("关闭")
+        close_button.clicked.connect(dialog.accept)
+        button_box.addWidget(close_button)
+        
+        main_layout.addLayout(button_box)
+        
+        # 显示对话框
+        dialog.exec()
 
     def on_deactivate(self):
         pass
