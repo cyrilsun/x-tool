@@ -58,13 +58,18 @@ def check_update(parent):
 
 def load_plugins(window: MainWindow):
     """加载并注册所有插件"""
+    from src.db.database import Database
+    db = Database()
+    
     plugin_dir = get_plugin_directory()
     loader = PluginLoader(plugin_dir)
     plugins = loader.load_all_plugins()
-
+    
+    # 先加载所有插件
+    plugin_map = {}
     for plugin in plugins:
-        window.add_tool(plugin.name, plugin)
-
+        plugin_map[plugin.name] = plugin
+        
         plugin.setStyleSheet("""
             QWidget {
                 font-size: 16px;
@@ -90,9 +95,48 @@ def load_plugins(window: MainWindow):
         """)
 
         plugin.on_activate()
-
+    
+    # 加载文件夹结构
+    window._load_folder_structure(db)
+    
+    # 加载插件到对应文件夹或根目录
+    for plugin_name, plugin in plugin_map.items():
+        folder_id = db.get_plugin_folder(plugin_name)
+        
+        if folder_id:
+            # 找到对应的文件夹项
+            folder_item = None
+            
+            # 递归遍历所有项，查找匹配的folder_id
+            def find_folder_item(item):
+                nonlocal folder_item
+                if not item or folder_item:
+                    return
+                
+                item_data = item.data(0, Qt.ItemDataRole.UserRole)
+                if item_data and item_data.get("type") == "folder" and item_data.get("folder_id") == folder_id:
+                    folder_item = item
+                    return
+                
+                for i in range(item.childCount()):
+                    find_folder_item(item.child(i))
+            
+            # 先检查顶层项
+            for i in range(window.tool_list_widget.topLevelItemCount()):
+                find_folder_item(window.tool_list_widget.topLevelItem(i))
+            
+            if folder_item:
+                # 添加到文件夹中
+                window.add_tool_to_folder(plugin_name, plugin, folder_item)
+            else:
+                # 文件夹不存在，添加到根目录
+                window.add_tool(plugin_name, plugin)
+        else:
+            # 没有文件夹关联，添加到根目录
+            window.add_tool(plugin_name, plugin)
+    
     # 默认显示欢迎页面
-    window.on_tool_selected(-1)
+    # window.on_tool_selected(-1)  # 不再需要手动调用，首页按钮已默认选中
 
 
 if __name__ == "__main__":
@@ -114,7 +158,10 @@ if __name__ == "__main__":
     load_plugins(window)
 
     # 默认选中首页
-    window.tool_list_widget.setCurrentRow(0)
+    # 获取首页项
+    home_item = window.tool_list_widget.topLevelItem(0)  # 首页是第一个顶层项
+    if home_item:
+        window.tool_list_widget.setCurrentItem(home_item)
 
     window.show()
 

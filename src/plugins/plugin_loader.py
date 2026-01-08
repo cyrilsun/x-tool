@@ -93,7 +93,67 @@ class PluginLoader:
         self.plugins: Dict[str, Any] = {}
         self.loaded_plugins: List[Any] = []
 
+    def get_plugin_details(self, plugin_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        获取插件的详细信息，包括名称、描述等
+        """
+        try:
+            plugin_name = plugin_info["name"]
+            plugin_path = plugin_info["path"]
+
+            plugins_dir = os.path.dirname(os.path.abspath(plugin_path))
+            if plugins_dir not in sys.path:
+                sys.path.insert(0, plugins_dir)
+
+            module = None
+            if plugin_path.endswith(".pyc"):
+                # 加载 .pyc 文件
+                try:
+                    module = load_pyc_module(plugin_name, plugin_path)
+                except Exception as pyc_error:
+                    print(f"加载 .pyc 插件 {plugin_name} 失败: {pyc_error}")
+                    # 尝试使用对应的 .py 文件
+                    py_file_path = plugin_path[:-1]  # 去掉 c 扩展名
+                    if os.path.exists(py_file_path):
+                        spec = importlib.util.spec_from_file_location(plugin_name, py_file_path)
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+            else:
+                # 加载 .py 文件
+                spec = importlib.util.spec_from_file_location(plugin_name, plugin_path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+
+            if module:
+                for attr_name in dir(module):
+                    attr = getattr(module, attr_name)
+                    if (isinstance(attr, type) and
+                        issubclass(attr, BasePlugin) and
+                        attr is not BasePlugin):
+                        plugin_instance = attr()
+                        return {
+                            "file_name": plugin_name,
+                            "name": plugin_instance.name,
+                            "description": plugin_instance.description,
+                            "path": plugin_path,
+                            "type": "single_file"
+                        }
+        except Exception as e:
+            print(f"获取插件 {plugin_info['name']} 详细信息失败: {e}")
+        
+        # 如果获取详细信息失败，返回基本信息
+        return {
+            "file_name": plugin_info["name"],
+            "name": plugin_info["name"],
+            "description": "",
+            "path": plugin_info["path"],
+            "type": plugin_info["type"]
+        }
+
     def discover_plugins(self) -> List[Dict[str, Any]]:
+        """
+        发现所有插件并返回详细信息列表
+        """
         plugins = []
 
         if not os.path.exists(self.plugin_dir):
@@ -105,19 +165,21 @@ class PluginLoader:
             if item.endswith(".py"):
                 plugin_name = item[:-3]
                 plugin_path = os.path.join(self.plugin_dir, item)
-                plugins.append({
+                plugin_details = self.get_plugin_details({
                     "name": plugin_name,
                     "path": plugin_path,
                     "type": "single_file"
                 })
+                plugins.append(plugin_details)
             elif item.endswith(".pyc"):
                 plugin_name = item[:-4]
                 plugin_path = os.path.join(self.plugin_dir, item)
-                plugins.append({
+                plugin_details = self.get_plugin_details({
                     "name": plugin_name,
                     "path": plugin_path,
                     "type": "single_file"
                 })
+                plugins.append(plugin_details)
 
         return plugins
 
