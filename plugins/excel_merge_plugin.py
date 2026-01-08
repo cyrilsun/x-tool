@@ -259,14 +259,14 @@ class ExcelMerger:
             # 保存合并后的文件
             merged_df.to_excel(output_path, index=False, engine='openpyxl')
             
-            print("=" * 60)
-            print(f"✓ 合并完成!")
-            print(f"输出文件: {output_path}")
-            print(f"总行数: {len(merged_df)}")
-            print(f"总列数: {len(merged_df.columns)}")
-            print(f"成功读取: {successful_files} 个文件")
-            print(f"读取失败: {failed_files} 个文件")
-            print(f"总处理sheet数: {total_sheets}")
+            # print("=" * 60)
+            # print(f"✓ 合并完成!")
+            # print(f"输出文件: {output_path}")
+            # print(f"总行数: {len(merged_df)}")
+            # print(f"总列数: {len(merged_df.columns)}")
+            # print(f"成功读取: {successful_files} 个文件")
+            # print(f"读取失败: {failed_files} 个文件")
+            # print(f"总处理sheet数: {total_sheets}")
             
             # 显示列信息
             print(f"\n列信息:")
@@ -708,6 +708,7 @@ class ExcelMergePlugin(BasePlugin):
                 border-radius: 4px;
             }
         """)
+        self.merge_combo.setMinimumWidth(200)  # 增加最小宽度，确保选项完整显示
         option_layout.addWidget(self.merge_combo)
 
         # 表头处理选项
@@ -758,10 +759,11 @@ class ExcelMergePlugin(BasePlugin):
         header_mode_label.setStyleSheet("font-size: 13px;")
         self.header_mode_combo = QComboBox()
         self.header_mode_combo.addItem("自动合并", "auto")
-        self.header_mode_combo.addItem("使用第一个表头", "first")
+        self.header_mode_combo.addItem("使用第一个文件表头", "first")
         self.header_mode_combo.addItem("合并所有表头", "union")
         self.header_mode_combo.addItem("仅保留共同表头", "intersection")
         self.header_mode_combo.setStyleSheet("font-size: 13px;")
+        self.header_mode_combo.setMinimumWidth(180)  # 增加最小宽度，确保选项完整显示
         header_mode_layout.addWidget(header_mode_label)
         header_mode_layout.addWidget(self.header_mode_combo)
         header_mode_layout.addStretch()
@@ -852,18 +854,18 @@ class ExcelMergePlugin(BasePlugin):
             <h3>Excel合并插件功能介绍</h3>
             <ul>
                 <li><strong>多文件合并</strong>：支持将多个Excel文件合并为一个文件</li>
-                <li><strong>多工作表处理</strong>：自动处理每个文件中的所有工作表</li>
-                <li><strong>智能表头合并</strong>：提供多种表头合并策略
+                <li><strong>多工作表合并</strong>：合并单个文件中的所有工作表</li>
+                <li><strong>表头处理</strong>：提供多种表头合并策略
                     <ul>
                         <li>自动合并：智能检测并合并相似表头</li>
-                        <li>使用第一个表头：以第一个文件的表头为准</li>
+                        <li>使用第一个文件表头：以第一个文件的表头为准</li>
                         <li>合并所有表头：保留所有文件的表头</li>
                         <li>仅保留共同表头：只保留所有文件都存在的表头</li>
                     </ul>
                 </li>
-                <li><strong>来源文件标记</strong>：自动为每行数据添加来源文件名标识</li>
-                <li><strong>表头预览</strong>：合并前可以预览最终的表头结构</li>
                 <li><strong>自定义表头行数</strong>：支持设置表头的行数</li>
+                <li><strong>来源文件</strong>：为每行数据添加来源文件名标识</li>
+                <li><strong>表头预览</strong>：合并前可以预览最终的表头结构</li>
             </ul>
         """)
         
@@ -882,7 +884,7 @@ class ExcelMergePlugin(BasePlugin):
         切换插件说明的展开/收起状态
         """
         if self.description_expanded:
-            self.description_scroll.setFixedHeight(100)  # 收起高度
+            self.description_scroll.setFixedHeight(50)  # 收起高度
             self.toggle_description_btn.setText("▼ 展开")
             self.description_expanded = False
         else:
