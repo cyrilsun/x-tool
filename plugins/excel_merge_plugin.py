@@ -89,8 +89,8 @@ class ExcelMerger:
             
             for sheet_name in sheet_names:
                 try:
-                    # 读取单个sheet
-                    df = pd.read_excel(excel_file, sheet_name=sheet_name)
+                    # 读取单个sheet，将所有列解析为字符串以避免长数字的科学计数法和精度丢失问题
+                    df = pd.read_excel(excel_file, sheet_name=sheet_name, dtype=str)
                     print(f"✓ 成功读取: {file_name} - {sheet_name} ({len(df)} 行)")
                     result.append({
                         "sheet_name": sheet_name,
