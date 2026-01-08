@@ -150,6 +150,21 @@ if __name__ == "__main__":
     window.setWindowTitle(f"X-Tool v{VERSION}")
 
     menubar = window.menuBar()
+    
+    # 添加文件菜单，位于帮助菜单之前
+    file_menu = menubar.addMenu("文件")
+    
+    # 添加新建子菜单
+    new_menu = file_menu.addMenu("新建")
+    
+    # 添加新建文件夹功能
+    new_folder_action = new_menu.addAction("文件夹")
+    new_folder_action.triggered.connect(lambda: window._create_folder())
+    
+    # 添加分隔符
+    file_menu.addSeparator()
+    
+    # 添加帮助菜单
     help_menu = menubar.addMenu("帮助")
 
     about_action = help_menu.addAction("关于")
