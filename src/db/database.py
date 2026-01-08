@@ -19,17 +19,6 @@ class Database:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # 创建笔记表
-        # cursor.execute('''
-        #     CREATE TABLE IF NOT EXISTS notes (
-        #         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        #         title TEXT NOT NULL,
-        #         content TEXT,
-        #         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        #         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        #     )
-        # ''')
-        
         # 创建工具配置表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS tool_configs (
@@ -63,57 +52,6 @@ class Database:
         
         conn.commit()
         conn.close()
-    
-    # 笔记相关操作
-    # def get_notes(self):
-    #     """获取所有笔记"""
-    #     conn = self.get_connection()
-    #     cursor = conn.cursor()
-    #     cursor.execute("SELECT id, title, updated_at FROM notes ORDER BY updated_at DESC")
-    #     notes = cursor.fetchall()
-    #     conn.close()
-    #     return notes
-    #
-    # def get_note(self, note_id):
-    #     """获取单个笔记"""
-    #     conn = self.get_connection()
-    #     cursor = conn.cursor()
-    #     cursor.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
-    #     note = cursor.fetchone()
-    #     conn.close()
-    #     return note
-    #
-    # def add_note(self, title, content):
-    #     """添加笔记"""
-    #     conn = self.get_connection()
-    #     cursor = conn.cursor()
-    #     cursor.execute(
-    #         "INSERT INTO notes (title, content) VALUES (?, ?)",
-    #         (title, content)
-    #     )
-    #     note_id = cursor.lastrowid
-    #     conn.commit()
-    #     conn.close()
-    #     return note_id
-    #
-    # def update_note(self, note_id, content):
-    #     """更新笔记"""
-    #     conn = self.get_connection()
-    #     cursor = conn.cursor()
-    #     cursor.execute(
-    #         "UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-    #         (content, note_id)
-    #     )
-    #     conn.commit()
-    #     conn.close()
-    #
-    # def delete_note(self, note_id):
-    #     """删除笔记"""
-    #     conn = self.get_connection()
-    #     cursor = conn.cursor()
-    #     cursor.execute("DELETE FROM notes WHERE id = ?", (note_id,))
-    #     conn.commit()
-    #     conn.close()
     
     # 工具配置相关操作
     def get_tool_config(self, tool_name, config_key):
