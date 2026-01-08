@@ -60,6 +60,8 @@ Thumbs.db
 .coverage
 .coverage.*
 .cache/
+bak/
+data/
 
 # X-Tool特定文件
 x_tool.db
