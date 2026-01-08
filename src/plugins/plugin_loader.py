@@ -1,8 +1,63 @@
 import os
 import sys
 import importlib
+import importlib.util
+import marshal
+import types
 from typing import List, Dict, Any, Optional
 from src.plugins.base_plugin import BasePlugin
+
+
+def load_pyc_module(module_name, module_path):
+    """
+    加载 .pyc 文件模块
+    使用 importlib.util 来加载，这是Python官方推荐的方式
+    """
+    try:
+        # 使用 importlib.util 加载 pyc 文件
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        if spec is None:
+            raise ValueError(f"无法创建模块规范: {module_path}")
+        
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        
+        # 执行模块
+        spec.loader.exec_module(module)
+        return module
+    except Exception as e:
+        # 如果 importlib 加载失败，尝试使用传统的 marshal 方式
+        with open(module_path, 'rb') as f:
+            # 跳过 pyc 文件头
+            # Python 3.7+ 的 pyc 文件头格式：
+            # 4字节魔数 + 可变长度的时间戳和元数据 + 4字节大小 + 代码对象
+            magic = f.read(4)
+            if not magic:
+                raise ValueError("无效的pyc文件：文件为空")
+            
+            # 处理 Python 3.7+ 的可变长度头部
+            if sys.version_info >= (3, 7):
+                while True:
+                    byte = f.read(1)
+                    if byte == b'\x0a':
+                        break
+                    if not byte:
+                        raise ValueError("无效的pyc文件：格式错误")
+                f.read(4)  # 跳过大小信息
+            else:
+                # 处理旧版本 Python 的固定长度头部
+                f.read(4)  # 时间戳
+                if sys.version_info >= (3, 3):
+                    f.read(4)  # 大小
+            
+            # 加载代码对象
+            code = marshal.load(f)
+            
+        module = types.ModuleType(module_name)
+        module.__file__ = module_path
+        module.__spec__ = importlib.machinery.ModuleSpec(module_name, None)
+        exec(code, module.__dict__)
+        return module
 
 
 def get_plugin_directory() -> str:
@@ -14,16 +69,21 @@ def get_plugin_directory() -> str:
         exe_dir = os.path.dirname(executable_path)
 
         if sys.platform == 'darwin':
+            # macOS .app bundle structure
             if executable_path.endswith('/Contents/MacOS/X-Tool'):
-                app_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(executable_path))))
-                sibling_plugins = os.path.join(app_path, "plugins")
+                # Get the directory containing the .app bundle
+                app_bundle_path = os.path.dirname(os.path.dirname(os.path.dirname(executable_path)))
+                app_parent_dir = os.path.dirname(app_bundle_path)
+                sibling_plugins = os.path.join(app_parent_dir, "plugins")
                 if os.path.exists(sibling_plugins):
                     return sibling_plugins
         else:
+            # Windows and Linux
             sibling_plugins = os.path.join(exe_dir, "plugins")
             if os.path.exists(sibling_plugins):
                 return sibling_plugins
 
+    # Default to current directory plugins
     return plugin_dir
 
 
@@ -40,9 +100,19 @@ class PluginLoader:
             return plugins
 
         for item in os.listdir(self.plugin_dir):
-            plugin_path = os.path.join(self.plugin_dir, item)
-            if item.endswith(".py") and not item.startswith("__"):
+            if item.startswith("__"):
+                continue
+            if item.endswith(".py"):
                 plugin_name = item[:-3]
+                plugin_path = os.path.join(self.plugin_dir, item)
+                plugins.append({
+                    "name": plugin_name,
+                    "path": plugin_path,
+                    "type": "single_file"
+                })
+            elif item.endswith(".pyc"):
+                plugin_name = item[:-4]
+                plugin_path = os.path.join(self.plugin_dir, item)
                 plugins.append({
                     "name": plugin_name,
                     "path": plugin_path,
@@ -60,21 +130,39 @@ class PluginLoader:
             if plugins_dir not in sys.path:
                 sys.path.insert(0, plugins_dir)
 
-            spec = importlib.util.spec_from_file_location(plugin_name, plugin_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            module = None
+            if plugin_path.endswith(".pyc"):
+                # 加载 .pyc 文件
+                try:
+                    module = load_pyc_module(plugin_name, plugin_path)
+                except Exception as pyc_error:
+                    print(f"加载 .pyc 插件 {plugin_name} 失败: {pyc_error}")
+                    print(f"尝试使用 .py 文件替代...")
+                    # 尝试使用对应的 .py 文件
+                    py_file_path = plugin_path[:-1]  # 去掉 c 扩展名
+                    if os.path.exists(py_file_path):
+                        spec = importlib.util.spec_from_file_location(plugin_name, py_file_path)
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+            else:
+                # 加载 .py 文件
+                spec = importlib.util.spec_from_file_location(plugin_name, plugin_path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
 
-            for attr_name in dir(module):
-                attr = getattr(module, attr_name)
-                if (isinstance(attr, type) and
-                    issubclass(attr, BasePlugin) and
-                    attr is not BasePlugin):
-                    plugin = attr()
-                    self.plugins[plugin.name] = plugin
-                    self.loaded_plugins.append(plugin)
-                    return plugin
+            if module:
+                for attr_name in dir(module):
+                    attr = getattr(module, attr_name)
+                    if (isinstance(attr, type) and
+                        issubclass(attr, BasePlugin) and
+                        attr is not BasePlugin):
+                        plugin = attr()
+                        self.plugins[plugin.name] = plugin
+                        self.loaded_plugins.append(plugin)
+                        return plugin
 
-        except Exception:
+        except Exception as e:
+            print(f"加载插件 {plugin_name} 失败: {e}")
             return None
         return None
 
