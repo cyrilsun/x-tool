@@ -816,6 +816,80 @@ class ExcelMergePlugin(BasePlugin):
 
         layout.addLayout(merge_layout)
 
+        # 添加插件说明
+        self.description_expanded = False  # 展开状态标记
+        
+        # 创建说明标题和展开/收起按钮
+        description_header_layout = QHBoxLayout()
+        
+        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
+        
+        self.toggle_description_btn = QPushButton("▼ 展开")
+        self.toggle_description_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f8f9fa;
+                color: #343a40;
+                border: 1px solid #dee2e6;
+                padding: 4px 8px;
+                font-size: 12px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #e9ecef;
+            }
+        """)
+        self.toggle_description_btn.clicked.connect(self.toggle_description)
+        
+        description_header_layout.addWidget(description_title)
+        description_header_layout.addStretch()
+        description_header_layout.addWidget(self.toggle_description_btn)
+        
+        # 创建说明内容区域
+        self.description_text = QTextEdit()
+        self.description_text.setReadOnly(True)
+        self.description_text.setStyleSheet("font-size: 13px; padding: 10px;")
+        self.description_text.setHtml("""
+            <h3>Excel合并插件功能介绍</h3>
+            <ul>
+                <li><strong>多文件合并</strong>：支持将多个Excel文件合并为一个文件</li>
+                <li><strong>多工作表处理</strong>：自动处理每个文件中的所有工作表</li>
+                <li><strong>智能表头合并</strong>：提供多种表头合并策略
+                    <ul>
+                        <li>自动合并：智能检测并合并相似表头</li>
+                        <li>使用第一个表头：以第一个文件的表头为准</li>
+                        <li>合并所有表头：保留所有文件的表头</li>
+                        <li>仅保留共同表头：只保留所有文件都存在的表头</li>
+                    </ul>
+                </li>
+                <li><strong>来源文件标记</strong>：自动为每行数据添加来源文件名标识</li>
+                <li><strong>表头预览</strong>：合并前可以预览最终的表头结构</li>
+                <li><strong>自定义表头行数</strong>：支持设置表头的行数</li>
+            </ul>
+        """)
+        
+        self.description_scroll = QScrollArea()
+        self.description_scroll.setWidget(self.description_text)
+        self.description_scroll.setWidgetResizable(True)
+        self.description_scroll.setMaximumHeight(300)
+        self.description_scroll.setFixedHeight(100)  # 默认高度
+        
+        # 添加到主布局
+        layout.addLayout(description_header_layout)
+        layout.addWidget(self.description_scroll)
+
+    def toggle_description(self):
+        """
+        切换插件说明的展开/收起状态
+        """
+        if self.description_expanded:
+            self.description_scroll.setFixedHeight(100)  # 收起高度
+            self.toggle_description_btn.setText("▼ 展开")
+            self.description_expanded = False
+        else:
+            self.description_scroll.setFixedHeight(300)  # 展开高度
+            self.toggle_description_btn.setText("▲ 收起")
+            self.description_expanded = True
+
     def select_source(self):
         # 打开文件对话框，支持选择多个Excel文件
         file_paths, _ = QFileDialog.getOpenFileNames(
