@@ -225,17 +225,21 @@ class ToolManager:
                     plugin_name = module_name
                 
                 # 保存插件与文件夹的关联关系
-                with Database() as db:
-                    # 获取文件夹ID
-                    folder_data = folder_item.data(0, Qt.ItemDataRole.UserRole)
-                    folder_id = folder_data.get("folder_id")
-                    
-                    # 重新关联插件与文件夹
-                    # associate_plugin_with_folder方法已经包含了先删除原有关联的逻辑
-                    db.plugin_association_manager.associate_plugin_with_folder(plugin_name, folder_id)
-                    
-                    # 更新插件文件夹映射
-                    self.main_window.plugin_folder_map[plugin_name] = folder_id
+                try:
+                    with Database() as db:
+                        # 获取文件夹ID
+                        folder_data = folder_item.data(0, Qt.ItemDataRole.UserRole)
+                        folder_id = folder_data.get("folder_id")
+                        
+                        # 重新关联插件与文件夹
+                        # associate_plugin_with_folder方法已经包含了先删除原有关联的逻辑
+                        db.plugin_association_manager.associate_plugin_with_folder(plugin_name, folder_id)
+                        
+                        # 更新插件文件夹映射
+                        self.main_window.plugin_folder_map[plugin_name] = folder_id
+                except Exception as e:
+                    print(f"关联插件与文件夹失败: {e}")
+                    raise
                 
                 # 刷新插件列表（与文件菜单的导入插件保持一致的逻辑）
                 # 保存当前选中的项

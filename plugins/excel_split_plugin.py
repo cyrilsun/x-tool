@@ -667,7 +667,13 @@ class ExcelSplitPlugin(BasePlugin):
             if self.available_fields:
                 print(f"成功加载 {len(self.available_fields)} 个字段")
         except Exception as e:
-            QMessageBox.warning(self, "警告", f"读取文件字段失败: {str(e)}")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("警告")
+            msg_box.setText(f"读取文件字段失败: {str(e)}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
     
     def split_files(self):
         """
@@ -675,12 +681,24 @@ class ExcelSplitPlugin(BasePlugin):
         """
         # 检查源文件
         if not self.source_file:
-            QMessageBox.warning(self, "警告", "请先选择要拆分的Excel文件")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("警告")
+            msg_box.setText("请先选择要拆分的Excel文件")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             return
         
         # 检查输出目录
         if not self.output_dir:
-            QMessageBox.warning(self, "警告", "请先选择输出目录")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("警告")
+            msg_box.setText("请先选择输出目录")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             return
         
         try:
@@ -692,7 +710,13 @@ class ExcelSplitPlugin(BasePlugin):
             df = result["dataframe"]
             
             if df is None or len(df) == 0:
-                QMessageBox.warning(self, "警告", "读取的Excel文件为空或格式不正确")
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box.setWindowTitle("警告")
+                msg_box.setText("读取的Excel文件为空或格式不正确")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
                 return
             
             # 获取拆分参数
@@ -710,21 +734,43 @@ class ExcelSplitPlugin(BasePlugin):
                 output_files = splitter.split_by_columns(df, columns_per_file, preserve_header)
             elif method == "field":
                 if not self.field_combo.currentText():
-                    QMessageBox.warning(self, "警告", "请选择拆分字段")
+                    msg_box = QMessageBox(self)
+                    msg_box.setIcon(QMessageBox.Icon.Warning)
+                    msg_box.setWindowTitle("警告")
+                    msg_box.setText("请选择拆分字段")
+                    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                    msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                    msg_box.exec()
                     return
                 field_name = self.field_combo.currentText()
                 output_files = splitter.split_by_field_value(df, field_name, preserve_header)
             
             # 显示拆分结果
             if output_files:
-                QMessageBox.information(self,
-                                      "拆分成功",
-                                      f"成功生成 {len(output_files)} 个文件\n输出目录: {self.output_dir}")
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Icon.Information)
+                msg_box.setWindowTitle("拆分成功")
+                msg_box.setText(f"成功生成 {len(output_files)} 个文件\n输出目录: {self.output_dir}")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
             else:
-                QMessageBox.information(self, "拆分完成", "没有生成任何文件")
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Icon.Information)
+                msg_box.setWindowTitle("拆分完成")
+                msg_box.setText("没有生成任何文件")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
                 
         except Exception as e:
-            QMessageBox.critical(self, "错误", f"拆分过程中出现错误: {str(e)}")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Critical)
+            msg_box.setWindowTitle("错误")
+            msg_box.setText(f"拆分过程中出现错误: {str(e)}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
     
     def toggle_description(self):
         """

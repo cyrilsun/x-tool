@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from .db_init import init_database
 from .models.folder import FolderManager
 from .models.plugin_association import PluginAssociationManager
 
@@ -25,60 +26,8 @@ class Database:
     def _init_db_without_context(self):
         """不使用上下文管理器初始化数据库（仅用于__init__）"""
         conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # 执行初始化SQL
         try:
-            # 创建工具配置表
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS tool_configs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    tool_name TEXT NOT NULL,
-                    config_key TEXT NOT NULL,
-                    config_value TEXT,
-                    UNIQUE(tool_name, config_key)
-                )
-            ''')
-            
-            # 创建插件文件夹表
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS plugin_folders (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    parent_id INTEGER,
-                    sort_order INTEGER DEFAULT 0,
-                    UNIQUE(name, COALESCE(parent_id, -1))
-                )
-            ''')
-            
-            # 添加sort_order列（如果不存在）
-            try:
-                cursor.execute("ALTER TABLE plugin_folders ADD COLUMN sort_order INTEGER DEFAULT 0")
-            except sqlite3.OperationalError as e:
-                # 如果列已存在，忽略错误
-                if "duplicate column name" not in str(e):
-                    raise
-            
-            # 创建插件与文件夹关联表
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS plugin_folder_associations (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    plugin_name TEXT NOT NULL,
-                    folder_id INTEGER,
-                    sort_order INTEGER DEFAULT 0,
-                    UNIQUE(plugin_name)
-                )
-            ''')
-            
-            # 添加sort_order列（如果不存在）
-            try:
-                cursor.execute("ALTER TABLE plugin_folder_associations ADD COLUMN sort_order INTEGER DEFAULT 0")
-            except sqlite3.OperationalError as e:
-                # 如果列已存在，忽略错误
-                if "duplicate column name" not in str(e):
-                    raise
-            
-            conn.commit()
+            init_database(conn)
         except Exception as e:
             conn.rollback()
             raise
@@ -87,7 +36,7 @@ class Database:
     
     def __enter__(self):
         """实现上下文管理器协议的__enter__方法"""
-        self._connection = sqlite3.connect(self.db_path)
+        self._connection = sqlite3.connect(self.db_path, timeout=10)  # 增加超时时间到10秒
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):

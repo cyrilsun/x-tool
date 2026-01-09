@@ -944,11 +944,23 @@ class ExcelMergePlugin(BasePlugin):
 
     def merge_files(self):
         if not self.source_path:
-            QMessageBox.warning(self, "警告", "请先选择源Excel文件")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("警告")
+            msg_box.setText("请先选择源Excel文件")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             return
 
         if not self.output_dir:
-            QMessageBox.warning(self, "警告", "请先选择输出文件夹")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("警告")
+            msg_box.setText("请先选择输出文件夹")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             return
 
         merge_option_text = self.merge_combo.currentText()
@@ -977,7 +989,13 @@ class ExcelMergePlugin(BasePlugin):
             # 显示统计信息
             stats = merger.get_merge_statistics()
             if stats["total_files"] == 0:
-                QMessageBox.warning(self, "警告", "没有找到Excel文件")
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box.setWindowTitle("警告")
+                msg_box.setText("没有找到Excel文件")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
                 return
 
             # 获取表头处理选项
@@ -1046,16 +1064,30 @@ class ExcelMergePlugin(BasePlugin):
                               f"\n"\
                               f"输出文件夹: {self.output_dir}"
                 
-                QMessageBox.information(
-                    self,
-                    "合并完成",
-                    message
-                )
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Icon.Information)
+                msg_box.setWindowTitle("合并完成")
+                msg_box.setText(message)
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
             else:
-                QMessageBox.critical(self, "合并失败", result["message"])
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Icon.Critical)
+                msg_box.setWindowTitle("合并失败")
+                msg_box.setText(result["message"])
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
 
         except Exception as e:
-            QMessageBox.critical(self, "错误", f"合并过程中发生错误: {str(e)}")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Critical)
+            msg_box.setWindowTitle("错误")
+            msg_box.setText(f"合并过程中发生错误: {str(e)}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
 
     def get_widget(self) -> "ExcelMergePlugin":
         return self
@@ -1068,7 +1100,13 @@ class ExcelMergePlugin(BasePlugin):
         预览合并后的表头效果
         """
         if not self.source_path:
-            QMessageBox.warning(self, "警告", "请先选择源Excel文件")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("警告")
+            msg_box.setText("请先选择源Excel文件")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             return
 
         try:
@@ -1087,7 +1125,13 @@ class ExcelMergePlugin(BasePlugin):
             # 获取统计信息
             stats = merger.get_merge_statistics()
             if stats["total_files"] == 0:
-                QMessageBox.warning(self, "警告", "没有找到Excel文件")
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box.setWindowTitle("警告")
+                msg_box.setText("没有找到Excel文件")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
                 return
 
             # 获取当前的表头处理设置
@@ -1119,7 +1163,13 @@ class ExcelMergePlugin(BasePlugin):
                     })
 
             if not all_sheets_data_with_files:
-                QMessageBox.warning(self, "警告", "没有成功读取任何Excel文件或sheet")
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box.setWindowTitle("警告")
+                msg_box.setText("没有成功读取任何Excel文件或sheet")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
                 return
 
             # 模拟表头合并逻辑，与merge_excel_files方法中的逻辑保持一致
@@ -1171,7 +1221,13 @@ class ExcelMergePlugin(BasePlugin):
             self.show_header_preview_dialog(preview_info)
 
         except Exception as e:
-            QMessageBox.critical(self, "错误", f"预览过程中发生错误: {str(e)}")
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Critical)
+            msg_box.setWindowTitle("错误")
+            msg_box.setText(f"预览过程中发生错误: {str(e)}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
 
     def show_header_preview_dialog(self, preview_info):
         """
