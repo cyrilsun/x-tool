@@ -221,6 +221,16 @@ class PluginLoader:
                         plugin = attr()
                         self.plugins[plugin.name] = plugin
                         self.loaded_plugins.append(plugin)
+                        
+                        # 保存插件信息到数据库
+                        from src.db.database import Database
+                        with Database() as db:
+                            db.plugin_manager.add_plugin(
+                                name=plugin.name,
+                                file_name=plugin_info["file_name"],
+                                description=plugin.description
+                            )
+                        
                         return plugin
 
         except Exception as e:

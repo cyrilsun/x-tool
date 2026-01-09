@@ -108,10 +108,67 @@ class ToolManager:
         
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                # 从数据库中删除插件关联
+                # 从数据库中删除插件和关联
                 from src.db.database import Database
+                from src.plugins.plugin_loader import get_plugin_directory
+                import os
+                
                 with Database() as db:
+                    # 获取插件文件名
+                    plugin_file_name = db.plugin_manager.get_plugin_file_name(tool_name)
+                    
+                    # 删除插件关联
                     db.plugin_association_manager.remove_plugin_from_folder(tool_name)
+                    
+                    # 删除插件记录
+                    db.plugin_manager.delete_plugin(tool_name)
+                
+                # 从文件系统中删除插件文件
+                if plugin_file_name:
+                    plugin_dir = get_plugin_directory()
+                    # 尝试删除.py和.pyc文件
+                    for ext in [".py", ".pyc"]:
+                        file_path = os.path.join(plugin_dir, f"{plugin_file_name}{ext}")
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                            print(f"成功删除插件文件: {file_path}")
+                        else:
+                            print(f"插件文件不存在: {file_path}")
+                else:
+                    print(f"无法获取插件文件名，插件名: {tool_name}")
+                    # 如果无法获取文件名，尝试通过插件名查找文件
+                    plugin_dir = get_plugin_directory()
+                    for item in os.listdir(plugin_dir):
+                        if not item.startswith("__") and (item.endswith(".py") or item.endswith(".pyc")):
+                            # 尝试加载插件文件，检查其名称是否匹配
+                            try:
+                                import importlib.util
+                                from src.plugins.base_plugin import BasePlugin
+                                file_path = os.path.join(plugin_dir, item)
+                                module_name = os.path.splitext(item)[0]
+                                spec = importlib.util.spec_from_file_location(module_name, file_path)
+                                if spec and spec.loader:
+                                    module = importlib.util.module_from_spec(spec)
+                                    spec.loader.exec_module(module)
+                                    for attr_name in dir(module):
+                                        attr = getattr(module, attr_name)
+                                        if (isinstance(attr, type) and
+                                            issubclass(attr, BasePlugin) and
+                                            attr is not BasePlugin):
+                                            plugin_instance = attr()
+                                            if plugin_instance.name == tool_name:
+                                                # 找到了匹配的插件文件，删除它
+                                                os.remove(file_path)
+                                                print(f"成功删除插件文件: {file_path}")
+                                                # 如果是.py文件，也删除对应的.pyc文件
+                                                if item.endswith(".py"):
+                                                    pyc_path = os.path.join(plugin_dir, f"{module_name}.pyc")
+                                                    if os.path.exists(pyc_path):
+                                                        os.remove(pyc_path)
+                                                        print(f"成功删除插件文件: {pyc_path}")
+                                                break
+                            except Exception as e:
+                                print(f"检查插件文件 {item} 失败: {e}")
                 
                 # 从工具列表中移除
                 if tool_item.parent():
