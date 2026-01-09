@@ -175,8 +175,28 @@ def import_plugin(window):
                 if reply != QMessageBox.StandardButton.Yes:
                     return
             
-            # 复制文件
+            # 检查是否是已存在的插件
+            file_name = os.path.basename(file_path)
+            plugin_name_without_ext = os.path.splitext(file_name)[0]
+            
+            # 复制文件并打印调试信息
+            print(f"正在复制插件文件: {file_path} -> {destination_path}")
             shutil.copy2(file_path, destination_path)
+            print(f"插件文件复制成功，目标文件存在: {os.path.exists(destination_path)}")
+            
+            # 如果是覆盖现有插件，删除所有与该插件相关的关联关系
+            with Database() as db:
+                cursor = db.get_connection().cursor()
+                # 查找与该文件名相关的所有插件
+                cursor.execute("SELECT name FROM plugins WHERE file_name = ?", (plugin_name_without_ext,))
+                existing_plugins = cursor.fetchall()
+                
+                # 删除这些插件的关联关系，使它们回到根目录
+                for plugin_name in existing_plugins:
+                    cursor.execute(
+                        "DELETE FROM plugin_folder_associations WHERE plugin_name = ?",
+                        (plugin_name[0],)
+                    )
             
             # 刷新插件
             # 1. 清除现有的插件
@@ -203,10 +223,10 @@ def import_plugin(window):
             # 清空插件映射
             window.plugin_widget_map.clear()
             
-            # 2. 重新加载插件
+            # 重新加载插件
             load_plugins(window)
             
-            # 3. 选择之前的工具或首页
+            # 4. 选择之前的工具或首页
             if current_item_type == "home":
                 # 选择首页
                 home_item = window.tool_list_widget.topLevelItem(0)

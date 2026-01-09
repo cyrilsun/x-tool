@@ -239,6 +239,10 @@ class PluginLoader:
         return None
 
     def load_all_plugins(self) -> List[Any]:
+        # 清空之前的插件列表，避免重复加载
+        self.plugins.clear()
+        self.loaded_plugins.clear()
+        
         plugins = self.discover_plugins()
         for plugin_info in plugins:
             plugin = self.load_plugin(plugin_info)
