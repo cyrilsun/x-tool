@@ -83,8 +83,8 @@ def get_plugin_directory() -> str:
             if os.path.exists(sibling_plugins):
                 return sibling_plugins
 
-    # Default to current directory plugins
-    return plugin_dir
+    # Default to current directory plugins, but ensure it's absolute
+    return os.path.abspath(plugin_dir)
 
 
 class PluginLoader:

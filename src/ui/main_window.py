@@ -398,8 +398,9 @@ class MainWindow(QMainWindow):
         """工具右键菜单"""
         menu = QMenu()
         
-        # 这里可以添加工具相关的右键菜单选项
-        # 例如：移到文件夹、删除等
+        # 添加删除插件选项
+        delete_plugin_action = menu.addAction("删除插件")
+        delete_plugin_action.triggered.connect(lambda: self._delete_plugin(tool_item))
         
         menu.exec(self.tool_list_widget.mapToGlobal(position))
     
@@ -512,6 +513,153 @@ class MainWindow(QMainWindow):
             folder_item = None
         except Exception as e:
             print(f"删除文件夹失败: {e}")
+    
+    def _find_plugin_file(self, plugin_name, plugin_dir):
+        """根据插件名称查找插件文件"""
+        import os
+        import sys
+        import importlib.util
+        from src.plugins.base_plugin import BasePlugin
+        
+        # 遍历插件目录中的所有.py和.pyc文件
+        for item in os.listdir(plugin_dir):
+            if item.startswith("__"):
+                continue
+                
+            file_path = os.path.join(plugin_dir, item)
+            if not (item.endswith(".py") or item.endswith(".pyc")):
+                continue
+                
+            try:
+                # 获取模块名称（不包含扩展名）
+                module_name = item[:-3] if item.endswith(".py") else item[:-4]
+                
+                # 加载模块
+                if item.endswith(".pyc"):
+                    # 加载.pyc文件
+                    spec = importlib.util.spec_from_file_location(module_name, file_path)
+                    if spec is None:
+                        continue
+                    
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[module_name] = module
+                    spec.loader.exec_module(module)
+                else:
+                    # 加载.py文件
+                    spec = importlib.util.spec_from_file_location(module_name, file_path)
+                    if spec is None:
+                        continue
+                    
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[module_name] = module
+                    spec.loader.exec_module(module)
+                
+                # 查找插件类
+                for attr_name in dir(module):
+                    attr = getattr(module, attr_name)
+                    if (isinstance(attr, type) and
+                        issubclass(attr, BasePlugin) and
+                        attr is not BasePlugin):
+                        # 创建插件实例
+                        plugin_instance = attr()
+                        # 检查插件名称是否匹配
+                        if plugin_instance.name == plugin_name:
+                            return file_path
+            except Exception as e:
+                print(f"加载插件文件 '{item}' 失败: {e}")
+                continue
+        
+        return None
+    
+    def _delete_plugin(self, tool_item):
+        """删除插件"""
+        # 获取插件信息
+        item_data = tool_item.data(0, Qt.ItemDataRole.UserRole)
+        if not item_data or item_data.get("type") != "tool":
+            return
+        
+        plugin_name = item_data.get("name")
+        if not plugin_name:
+            return
+        
+        # 显示确认对话框
+        reply = QMessageBox.question(self, "确认删除", 
+                                    f"确定要删除插件 '{plugin_name}' 吗？\n此操作无法撤销。",
+                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                    QMessageBox.StandardButton.No)
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        # 从数据库模块导入Database类
+        from src.db.database import Database
+        import os
+        from src.plugins.plugin_loader import get_plugin_directory
+        
+        try:
+            # 1. 从数据库中删除插件与文件夹的关联
+            db = Database()
+            db.remove_plugin_from_folder(plugin_name)
+            
+            # 2. 从插件文件夹中删除插件文件
+            plugin_dir = get_plugin_directory()
+            
+            # 根据插件名称查找实际的插件文件
+            plugin_file = self._find_plugin_file(plugin_name, plugin_dir)
+            if plugin_file:
+                # 删除找到的文件
+                if os.path.exists(plugin_file):
+                    os.remove(plugin_file)
+                    print(f"已删除插件文件: {plugin_file}")
+                    
+                    # 也删除对应的.pyc或.py文件（如果存在）
+                    if plugin_file.endswith(".py"):
+                        pyc_file = plugin_file + "c"
+                        if os.path.exists(pyc_file):
+                            os.remove(pyc_file)
+                            print(f"已删除插件文件: {pyc_file}")
+                    else:  # .pyc文件
+                        py_file = plugin_file[:-1]  # 去掉c扩展名
+                        if os.path.exists(py_file):
+                            os.remove(py_file)
+                            print(f"已删除插件文件: {py_file}")
+            else:
+                print(f"未找到插件 '{plugin_name}' 对应的文件")
+            
+            # 3. 从界面中移除插件项
+            parent = tool_item.parent()
+            if parent:
+                # 插件在文件夹中
+                parent.removeChild(tool_item)
+            else:
+                # 插件在根目录
+                index = self.tool_list_widget.indexOfTopLevelItem(tool_item)
+                self.tool_list_widget.takeTopLevelItem(index)
+            
+            # 4. 清理插件与widget的映射
+            if plugin_name in self.plugin_widget_map:
+                # 5. 从堆栈部件中移除插件页面
+                widget = self.plugin_widget_map[plugin_name]
+                self.tool_stack_widget.removeWidget(widget)
+                widget.deleteLater()
+                
+                # 删除映射
+                del self.plugin_widget_map[plugin_name]
+            
+            # 6. 处理删除后的界面状态
+            # 如果当前显示的是被删除的插件页面，切换到首页
+            current_widget = self.tool_stack_widget.currentWidget()
+            if not current_widget or current_widget not in self.plugin_widget_map.values():
+                # 切换到首页
+                home_item = self.tool_list_widget.topLevelItem(0)  # 首页是第一个项
+                if home_item:
+                    self.tool_list_widget.setCurrentItem(home_item)
+            
+            QMessageBox.information(self, "删除成功", f"插件 '{plugin_name}' 已成功删除")
+            
+        except Exception as e:
+            QMessageBox.warning(self, "删除失败", f"删除插件失败: {e}")
+            print(f"删除插件失败: {e}")
     
     def dragEnterEvent(self, event):
         """拖动进入事件"""
