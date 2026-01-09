@@ -392,6 +392,10 @@ class MainWindow(QMainWindow):
         delete_folder_action = menu.addAction("删除文件夹")
         delete_folder_action.triggered.connect(lambda: self._delete_folder(folder_item))
         
+        # 导入插件选项
+        import_plugin_action = menu.addAction("导入插件")
+        import_plugin_action.triggered.connect(lambda: self._import_plugin_to_folder(folder_item))
+        
         menu.exec(self.tool_list_widget.mapToGlobal(position))
     
     def _show_tool_context_menu(self, position, tool_item):
@@ -513,6 +517,128 @@ class MainWindow(QMainWindow):
             folder_item = None
         except Exception as e:
             print(f"删除文件夹失败: {e}")
+    
+    def _import_plugin_to_folder(self, folder_item):
+        """将插件导入到指定文件夹"""
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        from src.db.database import Database
+        from src.plugins.plugin_loader import get_plugin_directory, PluginLoader
+        from main import load_plugins
+        import shutil
+        import os
+        import sys
+        import importlib.util
+        from src.plugins.base_plugin import BasePlugin
+        
+        # 打开文件选择对话框
+        file_dialog = QFileDialog()
+        file_dialog.setWindowTitle("选择插件文件")
+        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+        file_dialog.setNameFilter("Python Files (*.py *.pyc)")
+        
+        if file_dialog.exec():
+            # 获取选择的文件路径
+            file_path = file_dialog.selectedFiles()[0]
+            
+            # 获取插件目录
+            plugin_dir = get_plugin_directory()
+            
+            # 获取文件名
+            file_name = os.path.basename(file_path)
+            destination_path = os.path.join(plugin_dir, file_name)
+            
+            try:
+                # 检查文件是否已存在
+                if os.path.exists(destination_path):
+                    # 询问是否覆盖
+                    reply = QMessageBox.question(
+                        self, "文件已存在", 
+                        f"插件文件 '{file_name}' 已存在，是否覆盖？",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.No
+                    )
+                    
+                    if reply != QMessageBox.StandardButton.Yes:
+                        return
+                
+                # 复制文件到插件目录
+                shutil.copy2(file_path, destination_path)
+                
+                # 获取真实的插件名称（从插件类的name属性获取）
+                plugin_name = None
+                module_name = os.path.splitext(file_name)[0]
+                
+                # 尝试加载插件，获取其真实名称
+                try:
+                    # 动态加载插件模块
+                    spec = importlib.util.spec_from_file_location(module_name, destination_path)
+                    if spec and spec.loader:
+                        module = importlib.util.module_from_spec(spec)
+                        sys.modules[module_name] = module
+                        spec.loader.exec_module(module)
+                        
+                        # 查找插件类
+                        for attr_name in dir(module):
+                            attr = getattr(module, attr_name)
+                            if (isinstance(attr, type) and
+                                issubclass(attr, BasePlugin) and
+                                attr is not BasePlugin):
+                                # 创建插件实例并获取名称
+                                plugin_instance = attr()
+                                plugin_name = plugin_instance.name
+                                break
+                except Exception as e:
+                    print(f"加载插件获取名称失败: {e}")
+                    # 如果加载失败，回退到使用文件名作为插件名称
+                    plugin_name = module_name
+                
+                # 保存插件与文件夹的关联关系
+                with Database() as db:
+                    # 获取文件夹ID
+                    folder_data = folder_item.data(0, Qt.ItemDataRole.UserRole)
+                    folder_id = folder_data.get("folder_id")
+                    
+                    # 先移除原有关联（如果存在）
+                    cursor = db.get_connection().cursor()
+                    cursor.execute("DELETE FROM plugin_folder_associations WHERE plugin_name = ?", (plugin_name,))
+                    db.get_connection().commit()
+                    
+                    # 重新关联插件与文件夹
+                    db.associate_plugin_with_folder(plugin_name, folder_id)
+                    
+                    # 更新插件文件夹映射
+                    self.plugin_folder_map[plugin_name] = folder_id
+                
+                # 刷新插件列表（与文件菜单的导入插件保持一致的逻辑）
+                # 保存当前选中的项
+                current_item = self.tool_list_widget.currentItem()
+                current_item_type = None
+                current_item_data = None
+                if current_item:
+                    current_item_data = current_item.data(0, Qt.ItemDataRole.UserRole)
+                    if current_item_data:
+                        current_item_type = current_item_data.get("type")
+                
+                # 清除所有工具项（保留首页）
+                for i in range(self.tool_list_widget.topLevelItemCount() - 1, 0, -1):
+                    item = self.tool_list_widget.topLevelItem(i)
+                    self.tool_list_widget.takeTopLevelItem(i)
+                
+                # 清除堆栈部件中的所有工具页面（保留欢迎页面）
+                for i in range(self.tool_stack_widget.count() - 1, 0, -1):
+                    widget = self.tool_stack_widget.widget(i)
+                    self.tool_stack_widget.removeWidget(widget)
+                
+                # 清除插件映射
+                self.plugin_widget_map.clear()
+                
+                # 重新加载所有插件
+                load_plugins(self)
+                
+                QMessageBox.information(self, "导入成功", f"插件 '{file_name}' 已成功导入到文件夹中！")
+                
+            except Exception as e:
+                QMessageBox.critical(self, "导入失败", f"导入插件时出错：{str(e)}")
     
     def _find_plugin_file(self, plugin_name, plugin_dir):
         """根据插件名称查找插件文件"""

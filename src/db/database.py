@@ -7,12 +7,28 @@ class Database:
         # 数据库文件路径，存储在data目录下
         self.db_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", db_name)
         
+        # 当前上下文中的连接
+        self._connection = None
+        
         # 初始化数据库
         self.init_db()
     
+    def __enter__(self):
+        """实现上下文管理器协议的__enter__方法"""
+        self._connection = sqlite3.connect(self.db_path)
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """实现上下文管理器协议的__exit__方法"""
+        if self._connection:
+            self._connection.close()
+            self._connection = None
+    
     def get_connection(self):
         """获取数据库连接"""
-        return sqlite3.connect(self.db_path)
+        if self._connection:  # 如果在上下文中，返回已存在的连接
+            return self._connection
+        return sqlite3.connect(self.db_path)  # 否则创建新连接
     
     def init_db(self):
         """初始化数据库，创建表格"""
@@ -168,7 +184,11 @@ class Database:
             (folder_id,)
         )
         plugins = [(row[0], row[1]) for row in cursor.fetchall()]
-        conn.close()
+        
+        # 如果不在上下文中，关闭连接
+        if not self._connection:
+            conn.close()
+            
         return plugins
     
     def associate_plugin_with_folder(self, plugin_name, folder_id):
@@ -190,7 +210,10 @@ class Database:
             (plugin_name, folder_id, next_sort_order)
         )
         conn.commit()
-        conn.close()
+        
+        # 如果不在上下文中，关闭连接
+        if not self._connection:
+            conn.close()
     
     def get_plugin_folder(self, plugin_name):
         """获取插件所在的文件夹和排序顺序"""
@@ -201,7 +224,11 @@ class Database:
             (plugin_name,)
         )
         result = cursor.fetchone()
-        conn.close()
+        
+        # 如果不在上下文中，关闭连接
+        if not self._connection:
+            conn.close()
+            
         if result:
             return result[0], result[1]  # 返回folder_id和sort_order
         return None, 0  # 默认返回None和0
@@ -210,9 +237,12 @@ class Database:
         """移除插件与文件夹的关联"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute("UPDATE plugin_folder_associations SET folder_id = NULL WHERE plugin_name = ?", (plugin_name,))
+        cursor.execute("DELETE FROM plugin_folder_associations WHERE plugin_name = ?", (plugin_name,))
         conn.commit()
-        conn.close()
+        
+        # 如果不在上下文中，关闭连接
+        if not self._connection:
+            conn.close()
     
     def update_folder_sort_order(self, folder_id, sort_order):
         """更新文件夹排序顺序"""
@@ -234,4 +264,7 @@ class Database:
             (sort_order, plugin_name)
         )
         conn.commit()
-        conn.close()
+        
+        # 如果不在上下文中，关闭连接
+        if not self._connection:
+            conn.close()
