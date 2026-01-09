@@ -168,6 +168,48 @@ class MainWindow(QMainWindow):
         # 添加首页按钮和欢迎页面
         self._add_home_button()
         self._init_welcome_page()
+        
+        # 创建菜单
+        self._create_menus()
+    
+    def _create_menus(self):
+        """创建应用菜单"""
+        # 导入需要的模块
+        from src.plugins.plugin_manager import import_plugin, backup_plugins, restore_plugins
+        from src.utils.app_utils import show_about_dialog
+        
+        menubar = self.menuBar()
+        
+        # 添加文件菜单，位于帮助菜单之前
+        file_menu = menubar.addMenu("文件")
+        
+        # 添加新建子菜单
+        new_menu = file_menu.addMenu("新建")
+        
+        # 添加新建文件夹功能
+        new_folder_action = new_menu.addAction("文件夹")
+        new_folder_action.triggered.connect(lambda: self._create_folder())
+        
+        # 添加分隔符
+        file_menu.addSeparator()
+        
+        # 添加导入插件功能
+        import_plugin_action = file_menu.addAction("导入插件")
+        import_plugin_action.triggered.connect(lambda: import_plugin(self))
+        
+        # 添加备份插件功能
+        backup_plugin_action = file_menu.addAction("备份插件")
+        backup_plugin_action.triggered.connect(lambda: backup_plugins(self))
+        
+        # 添加恢复插件功能
+        restore_plugin_action = file_menu.addAction("恢复插件")
+        restore_plugin_action.triggered.connect(lambda: restore_plugins(self))
+        
+        # 添加帮助菜单
+        help_menu = menubar.addMenu("帮助")
+        
+        about_action = help_menu.addAction("关于")
+        about_action.triggered.connect(lambda: show_about_dialog(self))
 
     def _init_welcome_page(self):
         """初始化欢迎页面"""
@@ -413,7 +455,6 @@ class MainWindow(QMainWindow):
         """创建文件夹"""
         # 从数据库模块导入Database类
         from src.db.database import Database
-        db = Database()
         
         # 获取文件夹名称
         folder_name, ok = QInputDialog.getText(self, "创建文件夹", "请输入文件夹名称:", text="新建文件夹")
@@ -429,25 +470,32 @@ class MainWindow(QMainWindow):
                 parent_id = parent_data.get("folder_id")
         
         try:
-            # 添加到数据库
-            folder_id = db.add_folder(folder_name, parent_id)
+            # 添加到数据库，使用上下文管理器
+            with Database() as db:
+                folder_id = db.add_folder(folder_name, parent_id)
             
             # 添加到界面
             folder_item = self.add_folder(folder_name, parent_item, folder_id)
         except Exception as e:
             # 捕获数据库唯一性约束错误
             if "UNIQUE constraint failed" in str(e):
-                QMessageBox.warning(self, "创建失败", f"同一目录下已存在名为 '{folder_name}' 的文件夹")
+                msg_box = QMessageBox(self)
+                msg_box.setWindowTitle("创建失败")
+                msg_box.setText(f"同一目录下已存在名为 '{folder_name}' 的文件夹")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
             else:
-                QMessageBox.warning(self, "创建失败", f"创建文件夹失败: {e}")
+                msg_box = QMessageBox(self)
+                msg_box.setWindowTitle("创建失败")
+                msg_box.setText(f"创建文件夹失败: {e}")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
             print(f"创建文件夹失败: {e}")
     
     def _edit_folder_name(self, folder_item):
         """编辑文件夹名称"""
-        # 从数据库模块导入Database类
-        from src.db.database import Database
-        db = Database()
-        
         # 获取当前文件夹名称
         current_name = folder_item.text(0)
         
@@ -467,8 +515,11 @@ class MainWindow(QMainWindow):
             folder_id = item_data.get("folder_id")
             
             try:
-                # 更新数据库
-                db.update_folder_name(folder_id, new_name)
+                # 从数据库模块导入Database类
+                from src.db.database import Database
+                # 使用上下文管理器更新数据库
+                with Database() as db:
+                    db.update_folder_name(folder_id, new_name)
                 
                 # 更新界面文本
                 folder_item.setText(0, new_name)
@@ -481,9 +532,19 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 # 捕获数据库唯一性约束错误
                 if "UNIQUE constraint failed" in str(e):
-                    QMessageBox.warning(self, "编辑失败", f"同一目录下已存在名为 '{new_name}' 的文件夹")
+                    msg_box = QMessageBox(self)
+                    msg_box.setWindowTitle("编辑失败")
+                    msg_box.setText(f"同一目录下已存在名为 '{new_name}' 的文件夹")
+                    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                    msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                    msg_box.exec()
                 else:
-                    QMessageBox.warning(self, "编辑失败", f"更新文件夹名称失败: {e}")
+                    msg_box = QMessageBox(self)
+                    msg_box.setWindowTitle("编辑失败")
+                    msg_box.setText(f"更新文件夹名称失败: {e}")
+                    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                    msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                    msg_box.exec()
                 print(f"更新文件夹名称失败: {e}")
     
     def _delete_folder(self, folder_item):
@@ -495,7 +556,6 @@ class MainWindow(QMainWindow):
         
         # 从数据库模块导入Database类
         from src.db.database import Database
-        db = Database()
         
         try:
             # 检查是否在数据库中
@@ -503,8 +563,9 @@ class MainWindow(QMainWindow):
             if item_data and item_data.get("folder_id"):
                 folder_id = item_data.get("folder_id")
                 
-                # 从数据库中删除
-                db.delete_folder(folder_id)
+                # 从数据库中删除，使用上下文管理器
+                with Database() as db:
+                    db.delete_folder(folder_id)
             
             # 从父项中移除
             parent = folder_item.parent()
@@ -524,7 +585,7 @@ class MainWindow(QMainWindow):
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
         from src.db.database import Database
         from src.plugins.plugin_loader import get_plugin_directory
-        from main import load_plugins
+        from src.plugins.plugin_manager import load_plugins
         import shutil
         import os
         import sys
@@ -604,12 +665,8 @@ class MainWindow(QMainWindow):
                     folder_data = folder_item.data(0, Qt.ItemDataRole.UserRole)
                     folder_id = folder_data.get("folder_id")
                     
-                    # 先移除原有关联（如果存在）
-                    cursor = db.get_connection().cursor()
-                    cursor.execute("DELETE FROM plugin_folder_associations WHERE plugin_name = ?", (plugin_name,))
-                    db.get_connection().commit()
-                    
                     # 重新关联插件与文件夹
+                    # associate_plugin_with_folder方法已经包含了先删除原有关联的逻辑
                     db.associate_plugin_with_folder(plugin_name, folder_id)
                     
                     # 更新插件文件夹映射
@@ -641,10 +698,20 @@ class MainWindow(QMainWindow):
                 # 重新加载所有插件
                 load_plugins(self)
                 
-                QMessageBox.information(self, "导入成功", f"插件 '{file_name}' 已成功导入到文件夹中！")
+                msg_box = QMessageBox(self)
+                msg_box.setWindowTitle("导入成功")
+                msg_box.setText(f"插件 '{file_name}' 已成功导入到文件夹中！")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
                 
             except Exception as e:
-                QMessageBox.critical(self, "导入失败", f"导入插件时出错：{str(e)}")
+                msg_box = QMessageBox(self)
+                msg_box.setWindowTitle("导入失败")
+                msg_box.setText(f"导入插件时出错：{str(e)}")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                msg_box.exec()
     
     def _find_plugin_file(self, plugin_name, plugin_dir):
         """根据插件名称查找插件文件"""
@@ -737,8 +804,9 @@ class MainWindow(QMainWindow):
         
         try:
             # 1. 从数据库中删除插件与文件夹的关联
-            db = Database()
-            db.remove_plugin_from_folder(plugin_name)
+            from src.db.database import Database
+            with Database() as db:
+                db.remove_plugin_from_folder(plugin_name)
             
             # 2. 从插件文件夹中删除插件文件
             plugin_dir = get_plugin_directory()
@@ -794,10 +862,20 @@ class MainWindow(QMainWindow):
                 if home_item:
                     self.tool_list_widget.setCurrentItem(home_item)
             
-            QMessageBox.information(self, "删除成功", f"插件 '{plugin_name}' 已成功删除")
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("删除成功")
+            msg_box.setText(f"插件 '{plugin_name}' 已成功删除")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             
         except Exception as e:
-            QMessageBox.warning(self, "删除失败", f"删除插件失败: {e}")
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("删除失败")
+            msg_box.setText(f"删除插件失败: {e}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             print(f"删除插件失败: {e}")
     
     def dragEnterEvent(self, event):

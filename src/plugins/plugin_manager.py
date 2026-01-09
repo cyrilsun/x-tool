@@ -12,8 +12,6 @@ from src.plugins.plugin_loader import PluginLoader, get_plugin_directory
 
 def load_plugins(window):
     """加载并注册所有插件"""
-    db = Database()
-    
     plugin_dir = get_plugin_directory()
     loader = PluginLoader(plugin_dir)
     plugins = loader.load_all_plugins()
@@ -50,15 +48,14 @@ def load_plugins(window):
         plugin.on_activate()
     
     # 加载文件夹结构
-    window._load_folder_structure(db)
-    
-    # 获取所有插件的文件夹关联和排序顺序
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    plugin_associations = cursor.execute(
-        "SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations"
-    ).fetchall()
-    conn.close()
+    with Database() as db:
+        window._load_folder_structure(db)
+        
+        # 获取所有插件的文件夹关联和排序顺序
+        cursor = db.get_connection().cursor()
+        plugin_associations = cursor.execute(
+            "SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations"
+        ).fetchall()
     
     # 按folder_id和sort_order分组
     plugins_by_folder = {}
@@ -207,9 +204,19 @@ def import_plugin(window):
                                 window.tool_list_widget.setCurrentItem(item)
                                 break
             
-            QMessageBox.information(window, "导入成功", f"插件 '{file_name}' 已成功导入并刷新。")
+            msg_box = QMessageBox(window)
+            msg_box.setWindowTitle("导入成功")
+            msg_box.setText(f"插件 '{file_name}' 已成功导入并刷新。")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
         except Exception as e:
-            QMessageBox.warning(window, "导入失败", f"导入插件失败: {e}")
+            msg_box = QMessageBox(window)
+            msg_box.setWindowTitle("导入失败")
+            msg_box.setText(f"导入插件失败: {e}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             print(f"导入插件失败: {e}")
             traceback.print_exc()
 
@@ -246,19 +253,16 @@ def backup_plugins(window):
                     plugin_files_copied += 1
             
             # 导出数据库关联数据
-            db = Database()
-            conn = db.get_connection()
-            cursor = conn.cursor()
-            
-            # 导出插件文件夹
-            cursor.execute("SELECT id, name, parent_id, sort_order FROM plugin_folders ORDER BY parent_id, sort_order")
-            folders = cursor.fetchall()
-            
-            # 导出插件关联
-            cursor.execute("SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations")
-            plugin_associations = cursor.fetchall()
-            
-            conn.close()
+            with Database() as db:
+                cursor = db.get_connection().cursor()
+                
+                # 导出插件文件夹
+                cursor.execute("SELECT id, name, parent_id, sort_order FROM plugin_folders ORDER BY parent_id, sort_order")
+                folders = cursor.fetchall()
+                
+                # 导出插件关联
+                cursor.execute("SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations")
+                plugin_associations = cursor.fetchall()
             
             # 保存关联数据到JSON文件
             backup_data = {
@@ -270,9 +274,19 @@ def backup_plugins(window):
             with open(backup_data_path, "w", encoding="utf-8") as f:
                 json.dump(backup_data, f, ensure_ascii=False, indent=4)
             
-            QMessageBox.information(window, "备份成功", f"成功备份 {plugin_files_copied} 个插件文件和关联数据。")
+            msg_box = QMessageBox(window)
+            msg_box.setWindowTitle("备份成功")
+            msg_box.setText(f"成功备份 {plugin_files_copied} 个插件文件和关联数据。")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
         except Exception as e:
-            QMessageBox.warning(window, "备份失败", f"备份插件失败: {e}")
+            msg_box = QMessageBox(window)
+            msg_box.setWindowTitle("备份失败")
+            msg_box.setText(f"备份插件失败: {e}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             print(f"备份插件失败: {e}")
             traceback.print_exc()
 
@@ -293,7 +307,12 @@ def restore_plugins(window):
         backup_data_path = os.path.join(backup_dir, "plugin_backup_data.json")
         
         if not os.path.exists(plugins_backup_dir) or not os.path.exists(backup_data_path):
-            QMessageBox.warning(window, "备份无效", "所选目录不是有效的插件备份目录。")
+            msg_box = QMessageBox(window)
+            msg_box.setWindowTitle("备份无效")
+            msg_box.setText("所选目录不是有效的插件备份目录。")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             return
         
         # 获取插件目录
@@ -337,13 +356,9 @@ def restore_plugins(window):
             with open(backup_data_path, "r", encoding="utf-8") as f:
                 backup_data = json.load(f)
             
-            db = Database()
-            conn = db.get_connection()
-            cursor = conn.cursor()
-            
-            try:
-                # 开始事务
-                conn.execute("BEGIN TRANSACTION")
+            # 执行数据库操作
+            with Database() as db:
+                cursor = db.get_connection().cursor()
                 
                 # 清空现有数据
                 cursor.execute("DELETE FROM plugin_folder_associations")
@@ -378,53 +393,54 @@ def restore_plugins(window):
                         "INSERT INTO plugin_folder_associations (plugin_name, folder_id, sort_order) VALUES (?, ?, ?)",
                         (plugin_name, new_folder_id, sort_order)
                     )
-                
-                # 提交事务
-                conn.commit()
-                
-                # 刷新插件
-                # 1. 清除现有的插件
-                # 保存当前选中的项
-                current_item = window.tool_list_widget.currentItem()
-                current_item_type = None
-                current_item_data = None
-                if current_item:
-                    current_item_data = current_item.data(0, Qt.ItemDataRole.UserRole)
-                    if current_item_data:
-                        current_item_type = current_item_data.get("type")
-                
-                # 清除所有工具项（保留首页）
-                for i in range(window.tool_list_widget.topLevelItemCount() - 1, 0, -1):
-                    item = window.tool_list_widget.topLevelItem(i)
-                    window.tool_list_widget.takeTopLevelItem(i)
-                
-                # 清除堆栈部件中的所有工具页面（保留欢迎页面）
-                for i in range(window.tool_stack_widget.count() - 1, 0, -1):
-                    widget = window.tool_stack_widget.widget(i)
-                    window.tool_stack_widget.removeWidget(widget)
-                    widget.deleteLater()
-                
-                # 清空插件映射
-                window.plugin_widget_map.clear()
-                
-                # 2. 重新加载插件
-                load_plugins(window)
-                
-                # 3. 选择首页
-                home_item = window.tool_list_widget.topLevelItem(0)  # 首页是第一个顶层项
-                if home_item:
-                    window.tool_list_widget.setCurrentItem(home_item)
-                
-                QMessageBox.information(window, "恢复成功", f"成功恢复 {plugin_files_restored} 个插件文件和关联数据。")
-                
-            except Exception as e:
-                # 回滚事务
-                conn.rollback()
-                raise
-            finally:
-                conn.close()
+            # 数据库操作结束
             
+            # 刷新插件
+            # 1. 清除现有的插件
+            # 保存当前选中的项
+            current_item = window.tool_list_widget.currentItem()
+            current_item_type = None
+            current_item_data = None
+            if current_item:
+                current_item_data = current_item.data(0, Qt.ItemDataRole.UserRole)
+                if current_item_data:
+                    current_item_type = current_item_data.get("type")
+            
+            # 清除所有工具项（保留首页）
+            for i in range(window.tool_list_widget.topLevelItemCount() - 1, 0, -1):
+                item = window.tool_list_widget.topLevelItem(i)
+                window.tool_list_widget.takeTopLevelItem(i)
+            
+            # 清除堆栈部件中的所有工具页面（保留欢迎页面）
+            for i in range(window.tool_stack_widget.count() - 1, 0, -1):
+                widget = window.tool_stack_widget.widget(i)
+                window.tool_stack_widget.removeWidget(widget)
+                widget.deleteLater()
+            
+            # 清空插件映射
+            window.plugin_widget_map.clear()
+            
+            # 2. 重新加载插件
+            load_plugins(window)
+            
+            # 3. 选择首页
+            home_item = window.tool_list_widget.topLevelItem(0)  # 首页是第一个顶层项
+            if home_item:
+                window.tool_list_widget.setCurrentItem(home_item)
+            
+            msg_box = QMessageBox(window)
+            msg_box.setWindowTitle("恢复成功")
+            msg_box.setText(f"成功恢复 {plugin_files_restored} 个插件文件和关联数据。")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
+        
         except Exception as e:
-            QMessageBox.warning(window, "恢复失败", f"恢复插件失败: {e}")
+            msg_box = QMessageBox(window)
+            msg_box.setWindowTitle("恢复失败")
+            msg_box.setText(f"恢复插件失败: {e}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
             print(f"恢复插件失败: {e}")
             traceback.print_exc()
