@@ -2,7 +2,7 @@ import sys
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFileDialog
 
 from src.plugins.plugin_loader import PluginLoader, get_plugin_directory
 from src.ui.main_window import MainWindow
@@ -165,6 +165,8 @@ def load_plugins(window: MainWindow):
     
     # 默认显示欢迎页面
     # window.on_tool_selected(-1)  # 不再需要手动调用，首页按钮已默认选中
+    
+    return plugin_map
 
 
 if __name__ == "__main__":
@@ -191,6 +193,103 @@ if __name__ == "__main__":
     
     # 添加分隔符
     file_menu.addSeparator()
+    
+    # 添加导入插件功能
+    import_plugin_action = file_menu.addAction("导入插件")
+    
+    def import_plugin():
+        """导入插件"""
+        file_dialog = QFileDialog()
+        file_dialog.setWindowTitle("选择插件文件")
+        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+        file_dialog.setNameFilter("Python Files (*.py *.pyc)")
+        
+        if file_dialog.exec():
+            # 获取选择的文件路径
+            file_path = file_dialog.selectedFiles()[0]
+            
+            # 获取插件目录
+            plugin_dir = get_plugin_directory()
+            
+            # 复制文件到插件目录
+            import shutil
+            import os
+            
+            # 获取文件名
+            file_name = os.path.basename(file_path)
+            destination_path = os.path.join(plugin_dir, file_name)
+            
+            try:
+                # 检查文件是否已存在
+                if os.path.exists(destination_path):
+                    # 询问是否覆盖
+                    reply = QMessageBox.question(
+                        window, "文件已存在", 
+                        f"插件文件 '{file_name}' 已存在，是否覆盖？",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.No
+                    )
+                    
+                    if reply != QMessageBox.StandardButton.Yes:
+                        return
+                
+                # 复制文件
+                shutil.copy2(file_path, destination_path)
+                
+                # 刷新插件
+                # 1. 清除现有的插件
+                # 保存当前选中的项
+                current_item = window.tool_list_widget.currentItem()
+                current_item_type = None
+                current_item_data = None
+                if current_item:
+                    current_item_data = current_item.data(0, Qt.ItemDataRole.UserRole)
+                    if current_item_data:
+                        current_item_type = current_item_data.get("type")
+                
+                # 清除所有工具项（保留首页）
+                for i in range(window.tool_list_widget.topLevelItemCount() - 1, 0, -1):
+                    item = window.tool_list_widget.topLevelItem(i)
+                    window.tool_list_widget.takeTopLevelItem(i)
+                
+                # 清除堆栈部件中的所有工具页面（保留欢迎页面）
+                for i in range(window.tool_stack_widget.count() - 1, 0, -1):
+                    widget = window.tool_stack_widget.widget(i)
+                    window.tool_stack_widget.removeWidget(widget)
+                    widget.deleteLater()
+                
+                # 清空插件映射
+                window.plugin_widget_map.clear()
+                
+                # 2. 重新加载插件
+                load_plugins(window)
+                
+                # 3. 选择之前的工具或首页
+                if current_item_type == "home":
+                    # 选择首页
+                    home_item = window.tool_list_widget.topLevelItem(0)
+                    if home_item:
+                        window.tool_list_widget.setCurrentItem(home_item)
+                elif current_item_type == "tool" and current_item_data:
+                    # 尝试重新选择之前的工具
+                    tool_name = current_item_data.get("name")
+                    if tool_name:
+                        for i in range(window.tool_list_widget.topLevelItemCount()):
+                            item = window.tool_list_widget.topLevelItem(i)
+                            if item:
+                                item_data = item.data(0, Qt.ItemDataRole.UserRole)
+                                if item_data and item_data.get("type") == "tool" and item_data.get("name") == tool_name:
+                                    window.tool_list_widget.setCurrentItem(item)
+                                    break
+                
+                QMessageBox.information(window, "导入成功", f"插件 '{file_name}' 已成功导入并刷新。")
+            except Exception as e:
+                QMessageBox.warning(window, "导入失败", f"导入插件失败: {e}")
+                print(f"导入插件失败: {e}")
+                import traceback
+                traceback.print_exc()
+    
+    import_plugin_action.triggered.connect(import_plugin)
     
     # 添加帮助菜单
     help_menu = menubar.addMenu("帮助")
