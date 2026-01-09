@@ -56,3 +56,13 @@ class PluginAssociationManager:
             "UPDATE plugin_folder_associations SET sort_order = ? WHERE plugin_name = ?",
             (sort_order, plugin_name)
         )
+    
+    def get_folder_plugins(self, folder_id):
+        """获取文件夹下的所有插件及其排序顺序"""
+        conn = self.database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT plugin_name, sort_order FROM plugin_folder_associations WHERE folder_id = ? ORDER BY sort_order",
+            (folder_id,)
+        )
+        return [(row[0], row[1]) for row in cursor.fetchall()]

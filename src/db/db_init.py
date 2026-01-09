@@ -1,19 +1,17 @@
-import sqlite3
-
-
 def init_database(conn):
     """初始化数据库表结构"""
     cursor = conn.cursor()
     
     try:
-        # 创建工具配置表
+        # 创建插件元数据表
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tool_configs (
+            CREATE TABLE IF NOT EXISTS plugins (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tool_name TEXT NOT NULL,
-                config_key TEXT NOT NULL,
-                config_value TEXT,
-                UNIQUE(tool_name, config_key)
+                name TEXT NOT NULL UNIQUE,
+                file_name TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
@@ -24,7 +22,8 @@ def init_database(conn):
                 name TEXT NOT NULL,
                 parent_id INTEGER,
                 sort_order INTEGER DEFAULT 0,
-                UNIQUE(name, COALESCE(parent_id, -1))
+                UNIQUE(name, COALESCE(parent_id, -1)),
+                FOREIGN KEY (parent_id) REFERENCES plugin_folders(id) ON DELETE CASCADE
             )
         ''')
         
@@ -35,9 +34,16 @@ def init_database(conn):
                 plugin_name TEXT NOT NULL,
                 folder_id INTEGER,
                 sort_order INTEGER DEFAULT 0,
-                UNIQUE(plugin_name)
+                UNIQUE(plugin_name),
+                FOREIGN KEY (plugin_name) REFERENCES plugins(name) ON DELETE CASCADE,
+                FOREIGN KEY (folder_id) REFERENCES plugin_folders(id) ON DELETE SET NULL
             )
         ''')
+        
+        # 创建索引以提高查询性能
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_plugins_name ON plugins(name)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_plugin_folders_parent_id ON plugin_folders(parent_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_plugin_folder_associations_folder_id ON plugin_folder_associations(folder_id)')
         
         conn.commit()
     except Exception as e:

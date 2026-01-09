@@ -35,13 +35,9 @@ class FolderManager:
         conn = self.database.get_connection()
         cursor = conn.cursor()
         
-        # 先删除该文件夹下的所有子文件夹
-        cursor.execute("DELETE FROM plugin_folders WHERE parent_id = ?", (folder_id,))
-        
-        # 再删除该文件夹下的所有插件关联
-        cursor.execute("UPDATE plugin_folder_associations SET folder_id = NULL WHERE folder_id = ?", (folder_id,))
-        
-        # 最后删除文件夹本身
+        # 删除文件夹，外键约束会自动处理级联删除
+        # 1. 自动删除该文件夹下的所有子文件夹（plugin_folders表的parent_id外键级联删除）
+        # 2. 自动将该文件夹下的所有插件关联设置为NULL（plugin_folder_associations表的folder_id外键ON DELETE SET NULL）
         cursor.execute("DELETE FROM plugin_folders WHERE id = ?", (folder_id,))
     
     def update_folder_name(self, folder_id, new_name):
@@ -60,15 +56,7 @@ class FolderManager:
         cursor.execute("SELECT id, name, parent_id, sort_order FROM plugin_folders ORDER BY parent_id, sort_order")
         return cursor.fetchall()
     
-    def get_folder_plugins(self, folder_id):
-        """获取文件夹下的所有插件及其排序顺序"""
-        conn = self.database.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT plugin_name, sort_order FROM plugin_folder_associations WHERE folder_id = ? ORDER BY sort_order",
-            (folder_id,)
-        )
-        return [(row[0], row[1]) for row in cursor.fetchall()]
+
     
     def update_folder_sort_order(self, folder_id, sort_order):
         """更新文件夹排序顺序"""

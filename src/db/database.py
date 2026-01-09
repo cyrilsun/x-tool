@@ -2,6 +2,7 @@ import sqlite3
 import os
 from .db_init import init_database
 from .models.folder import FolderManager
+from .models.plugin import PluginManager
 from .models.plugin_association import PluginAssociationManager
 
 class Database:
@@ -21,6 +22,7 @@ class Database:
         
         # 初始化业务管理器
         self.folder_manager = FolderManager(self)
+        self.plugin_manager = PluginManager(self)
         self.plugin_association_manager = PluginAssociationManager(self)
     
     def _init_db_without_context(self):
