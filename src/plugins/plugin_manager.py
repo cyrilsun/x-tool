@@ -49,7 +49,7 @@ def load_plugins(window):
     
     # 加载文件夹结构
     with Database() as db:
-        window._load_folder_structure(db)
+        window.folder_manager._load_folder_structure(db)
         
         # 获取所有插件的文件夹关联和排序顺序
         cursor = db.get_connection().cursor()
@@ -68,7 +68,7 @@ def load_plugins(window):
     root_plugins = sorted(plugins_by_folder.get(None, []), key=lambda x: x[1])
     for plugin_name, sort_order in root_plugins:
         if plugin_name in plugin_map:
-            window.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
+            window.tool_manager.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
     
     # 按排序顺序加载文件夹内的插件
     for folder_id, plugin_list in plugins_by_folder.items():
@@ -101,17 +101,17 @@ def load_plugins(window):
             sorted_plugins = sorted(plugin_list, key=lambda x: x[1])
             for plugin_name, sort_order in sorted_plugins:
                 if plugin_name in plugin_map:
-                    window.add_tool_to_folder(plugin_name, plugin_map[plugin_name], folder_item, sort_order)
+                    window.tool_manager.add_tool_to_folder(plugin_name, plugin_map[plugin_name], folder_item, sort_order)
         else:
             # 文件夹不存在，将插件添加到根目录
             for plugin_name, sort_order in plugin_list:
                 if plugin_name in plugin_map:
-                    window.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
+                    window.tool_manager.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
     
     # 加载没有关联的插件
     for plugin_name, plugin in plugin_map.items():
         if not any(plugin_name == p[0] for folder_plugins in plugins_by_folder.values() for p in folder_plugins):
-            window.add_tool(plugin_name, plugin)
+            window.tool_manager.add_tool(plugin_name, plugin)
     
     return plugin_map
 
