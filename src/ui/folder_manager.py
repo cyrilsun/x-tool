@@ -145,6 +145,15 @@ class FolderManager:
                 return
 
         try:
+            # 先删除文件夹中的所有插件
+            # 从后往前删除，避免索引变化问题
+            for i in range(folder_item.childCount() - 1, -1, -1):
+                child_item = folder_item.child(i)
+                child_data = child_item.data(0, Qt.ItemDataRole.UserRole)
+                if child_data and child_data.get("type") == "tool":
+                    # 调用tool_manager的delete_plugin方法删除插件，不显示确认对话框
+                    self.main_window.tool_manager.delete_plugin(child_item, show_confirmation=False)
+
             # 从数据库中删除文件夹
             item_data = folder_item.data(0, Qt.ItemDataRole.UserRole)
             if item_data and item_data.get("folder_id"):

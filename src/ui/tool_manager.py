@@ -83,8 +83,13 @@ class ToolManager:
         # 添加到堆栈部件
         self.main_window.tool_stack_widget.addWidget(widget)
 
-    def delete_plugin(self, tool_item):
-        """删除插件"""
+    def delete_plugin(self, tool_item, show_confirmation=True):
+        """删除插件
+        
+        Args:
+            tool_item: 要删除的工具项
+            show_confirmation: 是否显示确认对话框，默认为True
+        """
         item_data = tool_item.data(0, Qt.ItemDataRole.UserRole)
         if not item_data or item_data.get("type") != "tool":
             return
@@ -93,114 +98,119 @@ class ToolManager:
         if not tool_name:
             return
         
-        # 确认删除
-        msg_box = QMessageBox(self.main_window)
-        msg_box.setWindowTitle("确认删除")
-        msg_box.setText(f"确定要删除插件 '{tool_name}' 吗？")
-        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+        # 确认删除（仅当show_confirmation为True时）
+        if show_confirmation:
+            msg_box = QMessageBox(self.main_window)
+            msg_box.setWindowTitle("确认删除")
+            msg_box.setText(f"确定要删除插件 '{tool_name}' 吗？")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+            
+            # 修改按钮文本
+            msg_box.button(QMessageBox.StandardButton.Yes).setText("确定")
+            msg_box.button(QMessageBox.StandardButton.No).setText("取消")
+            
+            reply = msg_box.exec()
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                return
         
-        # 修改按钮文本
-        msg_box.button(QMessageBox.StandardButton.Yes).setText("确定")
-        msg_box.button(QMessageBox.StandardButton.No).setText("取消")
-        
-        reply = msg_box.exec()
-        
-        if reply == QMessageBox.StandardButton.Yes:
-            try:
-                # 从数据库中删除插件和关联
-                from src.db.database import Database
-                from src.plugins.plugin_loader import get_plugin_directory
-                import os
+        # 执行删除操作
+        try:
+            # 从数据库中删除插件和关联
+            from src.db.database import Database
+            from src.plugins.plugin_loader import get_plugin_directory
+            import os
+            
+            with Database() as db:
+                # 获取插件文件名
+                plugin_file_name = db.plugin_manager.get_plugin_file_name(tool_name)
                 
-                with Database() as db:
-                    # 获取插件文件名
-                    plugin_file_name = db.plugin_manager.get_plugin_file_name(tool_name)
-                    
-                    # 删除插件关联
-                    db.plugin_association_manager.remove_plugin_from_folder(tool_name)
-                    
-                    # 删除插件记录
-                    db.plugin_manager.delete_plugin(tool_name)
+                # 删除插件关联
+                db.plugin_association_manager.remove_plugin_from_folder(tool_name)
                 
-                # 从文件系统中删除插件文件
-                if plugin_file_name:
-                    plugin_dir = get_plugin_directory()
-                    # 尝试删除.py和.pyc文件
-                    for ext in [".py", ".pyc"]:
-                        file_path = os.path.join(plugin_dir, f"{plugin_file_name}{ext}")
-                        if os.path.exists(file_path):
-                            os.remove(file_path)
-                            print(f"成功删除插件文件: {file_path}")
-                        else:
-                            print(f"插件文件不存在: {file_path}")
-                else:
-                    print(f"无法获取插件文件名，插件名: {tool_name}")
-                    # 如果无法获取文件名，尝试通过插件名查找文件
-                    plugin_dir = get_plugin_directory()
-                    for item in os.listdir(plugin_dir):
-                        if not item.startswith("__") and (item.endswith(".py") or item.endswith(".pyc")):
-                            # 尝试加载插件文件，检查其名称是否匹配
-                            try:
-                                import importlib.util
-                                from src.plugins.base_plugin import BasePlugin
-                                file_path = os.path.join(plugin_dir, item)
-                                module_name = os.path.splitext(item)[0]
-                                spec = importlib.util.spec_from_file_location(module_name, file_path)
-                                if spec and spec.loader:
-                                    module = importlib.util.module_from_spec(spec)
-                                    spec.loader.exec_module(module)
-                                    for attr_name in dir(module):
-                                        attr = getattr(module, attr_name)
-                                        if (isinstance(attr, type) and
-                                            issubclass(attr, BasePlugin) and
-                                            attr is not BasePlugin):
-                                            plugin_instance = attr()
-                                            if plugin_instance.name == tool_name:
-                                                # 找到了匹配的插件文件，删除它
-                                                os.remove(file_path)
-                                                print(f"成功删除插件文件: {file_path}")
-                                                # 如果是.py文件，也删除对应的.pyc文件
-                                                if item.endswith(".py"):
-                                                    pyc_path = os.path.join(plugin_dir, f"{module_name}.pyc")
-                                                    if os.path.exists(pyc_path):
-                                                        os.remove(pyc_path)
-                                                        print(f"成功删除插件文件: {pyc_path}")
-                                                break
-                            except Exception as e:
-                                print(f"检查插件文件 {item} 失败: {e}")
-                
-                # 从工具列表中移除
-                if tool_item.parent():
-                    tool_item.parent().removeChild(tool_item)
-                else:
-                    self.main_window.tool_list_widget.takeTopLevelItem(
-                        self.main_window.tool_list_widget.indexOfTopLevelItem(tool_item)
-                    )
-                
-                # 从插件映射中移除
-                if tool_name in self.main_window.plugin_widget_map:
-                    widget = self.main_window.plugin_widget_map.pop(tool_name)
-                    # 从堆栈部件中移除
-                    if widget in [self.main_window.tool_stack_widget.widget(i) for i in range(self.main_window.tool_stack_widget.count())]:
-                        self.main_window.tool_stack_widget.removeWidget(widget)
-                        widget.deleteLater()
-                
-                # 显示删除成功消息
+                # 删除插件记录
+                db.plugin_manager.delete_plugin(tool_name)
+            
+            # 从文件系统中删除插件文件
+            if plugin_file_name:
+                plugin_dir = get_plugin_directory()
+                # 尝试删除.py和.pyc文件
+                for ext in [".py", ".pyc"]:
+                    file_path = os.path.join(plugin_dir, f"{plugin_file_name}{ext}")
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                        print(f"成功删除插件文件: {file_path}")
+                    else:
+                        print(f"插件文件不存在: {file_path}")
+            else:
+                print(f"无法获取插件文件名，插件名: {tool_name}")
+                # 如果无法获取文件名，尝试通过插件名查找文件
+                plugin_dir = get_plugin_directory()
+                for item in os.listdir(plugin_dir):
+                    if not item.startswith("__") and (item.endswith(".py") or item.endswith(".pyc")):
+                        # 尝试加载插件文件，检查其名称是否匹配
+                        try:
+                            import importlib.util
+                            from src.plugins.base_plugin import BasePlugin
+                            file_path = os.path.join(plugin_dir, item)
+                            module_name = os.path.splitext(item)[0]
+                            spec = importlib.util.spec_from_file_location(module_name, file_path)
+                            if spec and spec.loader:
+                                module = importlib.util.module_from_spec(spec)
+                                spec.loader.exec_module(module)
+                                for attr_name in dir(module):
+                                    attr = getattr(module, attr_name)
+                                    if (isinstance(attr, type) and
+                                        issubclass(attr, BasePlugin) and
+                                        attr is not BasePlugin):
+                                        plugin_instance = attr()
+                                        if plugin_instance.name == tool_name:
+                                            # 找到了匹配的插件文件，删除它
+                                            os.remove(file_path)
+                                            print(f"成功删除插件文件: {file_path}")
+                                            # 如果是.py文件，也删除对应的.pyc文件
+                                            if item.endswith(".py"):
+                                                pyc_path = os.path.join(plugin_dir, f"{module_name}.pyc")
+                                                if os.path.exists(pyc_path):
+                                                    os.remove(pyc_path)
+                                                    print(f"成功删除插件文件: {pyc_path}")
+                                            break
+                        except Exception as e:
+                            print(f"检查插件文件 {item} 失败: {e}")
+            
+            # 从工具列表中移除
+            if tool_item.parent():
+                tool_item.parent().removeChild(tool_item)
+            else:
+                self.main_window.tool_list_widget.takeTopLevelItem(
+                    self.main_window.tool_list_widget.indexOfTopLevelItem(tool_item)
+                )
+            
+            # 从插件映射中移除
+            if tool_name in self.main_window.plugin_widget_map:
+                widget = self.main_window.plugin_widget_map.pop(tool_name)
+                # 从堆栈部件中移除
+                if widget in [self.main_window.tool_stack_widget.widget(i) for i in range(self.main_window.tool_stack_widget.count())]:
+                    self.main_window.tool_stack_widget.removeWidget(widget)
+                    widget.deleteLater()
+            
+            # 显示删除成功消息（仅当show_confirmation为True时，避免删除文件夹时显示多个消息）
+            if show_confirmation:
                 msg_box = QMessageBox(self.main_window)
                 msg_box.setWindowTitle("删除成功")
                 msg_box.setText(f"插件 '{tool_name}' 已成功删除。")
                 msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
                 msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
                 msg_box.exec()
-            except Exception as e:
-                msg_box = QMessageBox(self.main_window)
-                msg_box.setWindowTitle("删除失败")
-                msg_box.setText(f"删除插件失败: {e}")
-                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
-                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
-                msg_box.exec()
-                print(f"删除插件失败: {e}")
+        except Exception as e:
+            msg_box = QMessageBox(self.main_window)
+            msg_box.setWindowTitle("删除失败")
+            msg_box.setText(f"删除插件失败: {e}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+            msg_box.exec()
+            print(f"删除插件失败: {e}")
 
     def import_plugin_to_folder(self, folder_item):
         """将插件导入到指定文件夹"""
