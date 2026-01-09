@@ -1,7 +1,6 @@
-import os
-import sys
-import shutil
 import json
+import os
+import shutil
 import traceback
 
 from PyQt6.QtCore import Qt
@@ -144,12 +143,17 @@ def import_plugin(window):
             # 检查文件是否已存在
             if os.path.exists(destination_path):
                 # 询问是否覆盖
-                reply = QMessageBox.question(
-                    window, "文件已存在", 
-                    f"插件文件 '{file_name}' 已存在，是否覆盖？",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No
-                )
+                msg_box = QMessageBox(window)
+                msg_box.setWindowTitle("文件已存在")
+                msg_box.setText(f"插件文件 '{file_name}' 已存在，是否覆盖？")
+                msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+                
+                # 修改按钮文本
+                msg_box.button(QMessageBox.StandardButton.Yes).setText("确定")
+                msg_box.button(QMessageBox.StandardButton.No).setText("取消")
+                
+                reply = msg_box.exec()
                 
                 if reply != QMessageBox.StandardButton.Yes:
                     return
@@ -308,12 +312,18 @@ def restore_plugins(window):
                     # 检查文件是否已存在
                     if os.path.exists(dest_path):
                         # 询问是否覆盖
-                        reply = QMessageBox.question(
-                            window, "文件已存在", 
-                            f"插件文件 '{item}' 已存在，是否覆盖？",
-                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-                            QMessageBox.StandardButton.No
-                        )
+                        msg_box = QMessageBox(window)
+                        msg_box.setWindowTitle("文件已存在")
+                        msg_box.setText(f"插件文件 '{item}' 已存在，是否覆盖？")
+                        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
+                        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+                        
+                        # 修改按钮文本
+                        msg_box.button(QMessageBox.StandardButton.Yes).setText("确定")
+                        msg_box.button(QMessageBox.StandardButton.No).setText("取消")
+                        msg_box.button(QMessageBox.StandardButton.Cancel).setText("取消")
+                        
+                        reply = msg_box.exec()
                         
                         if reply == QMessageBox.StandardButton.Cancel:
                             return

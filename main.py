@@ -1,16 +1,11 @@
 import sys
 
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QApplication
 
-from src.plugins.plugin_loader import get_plugin_directory
-from src.ui.main_window import MainWindow
+from src.config.app_config import VERSION
 from src.plugins.plugin_manager import load_plugins, import_plugin, backup_plugins, restore_plugins
-from src.utils.app_utils import show_about_dialog, check_update
-from src.config.app_config import VERSION, APP_NAME
-
-
-
-
+from src.ui.main_window import MainWindow
+from src.utils.app_utils import show_about_dialog
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

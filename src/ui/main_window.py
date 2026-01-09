@@ -1,7 +1,8 @@
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QMainWindow, QSplitter, QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem, \
-    QStackedWidget, QHeaderView, QLabel, QSpacerItem, QSizePolicy, QMenu, QLineEdit, QInputDialog, QMessageBox, QStyle
-from PyQt6.QtCore import Qt, QMimeData, QPoint, QCoreApplication
-from PyQt6.QtGui import QFont, QPixmap, QDrag, QCursor
+    QStackedWidget, QLabel, QSpacerItem, QSizePolicy, QMenu, QInputDialog, QMessageBox, QStyle
+
 
 # 自定义TreeWidget类，用于处理拖拽事件
 class CustomTreeWidget(QTreeWidget):
@@ -522,7 +523,7 @@ class MainWindow(QMainWindow):
         """将插件导入到指定文件夹"""
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
         from src.db.database import Database
-        from src.plugins.plugin_loader import get_plugin_directory, PluginLoader
+        from src.plugins.plugin_loader import get_plugin_directory
         from main import load_plugins
         import shutil
         import os
@@ -551,12 +552,17 @@ class MainWindow(QMainWindow):
                 # 检查文件是否已存在
                 if os.path.exists(destination_path):
                     # 询问是否覆盖
-                    reply = QMessageBox.question(
-                        self, "文件已存在", 
-                        f"插件文件 '{file_name}' 已存在，是否覆盖？",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                        QMessageBox.StandardButton.No
-                    )
+                    msg_box = QMessageBox(self)
+                    msg_box.setWindowTitle("文件已存在")
+                    msg_box.setText(f"插件文件 '{file_name}' 已存在，是否覆盖？")
+                    msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                    msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+                    
+                    # 修改按钮文本
+                    msg_box.button(QMessageBox.StandardButton.Yes).setText("确定")
+                    msg_box.button(QMessageBox.StandardButton.No).setText("取消")
+                    
+                    reply = msg_box.exec()
                     
                     if reply != QMessageBox.StandardButton.Yes:
                         return
@@ -709,10 +715,17 @@ class MainWindow(QMainWindow):
             return
         
         # 显示确认对话框
-        reply = QMessageBox.question(self, "确认删除", 
-                                    f"确定要删除插件 '{plugin_name}' 吗？\n此操作无法撤销。",
-                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                                    QMessageBox.StandardButton.No)
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("确认删除")
+        msg_box.setText(f"确定要删除插件 '{plugin_name}' 吗？\n此操作无法撤销。")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+        
+        # 修改按钮文本
+        msg_box.button(QMessageBox.StandardButton.Yes).setText("确定")
+        msg_box.button(QMessageBox.StandardButton.No).setText("取消")
+        
+        reply = msg_box.exec()
         
         if reply != QMessageBox.StandardButton.Yes:
             return
