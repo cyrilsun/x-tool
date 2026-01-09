@@ -1,8 +1,10 @@
 import sqlite3
 import os
+from .models.folder import FolderManager
+from .models.plugin_association import PluginAssociationManager
 
 class Database:
-    """SQLite数据库管理类"""
+    """SQLite数据库管理类 - 只负责核心连接管理和初始化"""
     def __init__(self, db_name="x_tool.db"):
         # 数据库文件路径，存储在data目录下
         self.db_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", db_name)
@@ -15,6 +17,10 @@ class Database:
         
         # 初始化数据库
         self._init_db_without_context()
+        
+        # 初始化业务管理器
+        self.folder_manager = FolderManager(self)
+        self.plugin_association_manager = PluginAssociationManager(self)
     
     def _init_db_without_context(self):
         """不使用上下文管理器初始化数据库（仅用于__init__）"""
@@ -100,197 +106,3 @@ class Database:
             return self._connection
         # 不在上下文中时，也应该保持连接一致性
         raise RuntimeError("Database connection should be used within a context manager")
-    
-    def init_db(self):
-        """初始化数据库，创建表格"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        
-        # 创建工具配置表
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tool_configs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tool_name TEXT NOT NULL,
-                config_key TEXT NOT NULL,
-                config_value TEXT,
-                UNIQUE(tool_name, config_key)
-            )
-        ''')
-        
-        # 创建插件文件夹表
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS plugin_folders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                parent_id INTEGER,
-                sort_order INTEGER DEFAULT 0,
-                UNIQUE(name, COALESCE(parent_id, -1))
-            )
-        ''')
-        
-        # 添加sort_order列（如果不存在）
-        try:
-            cursor.execute("ALTER TABLE plugin_folders ADD COLUMN sort_order INTEGER DEFAULT 0")
-        except sqlite3.OperationalError as e:
-            # 如果列已存在，忽略错误
-            if "duplicate column name" not in str(e):
-                raise
-        
-        # 创建插件与文件夹关联表
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS plugin_folder_associations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                plugin_name TEXT NOT NULL,
-                folder_id INTEGER,
-                sort_order INTEGER DEFAULT 0,
-                UNIQUE(plugin_name)
-            )
-        ''')
-        
-        # 添加sort_order列（如果不存在）
-        try:
-            cursor.execute("ALTER TABLE plugin_folder_associations ADD COLUMN sort_order INTEGER DEFAULT 0")
-        except sqlite3.OperationalError as e:
-            # 如果列已存在，忽略错误
-            if "duplicate column name" not in str(e):
-                raise
-    
-    # 工具配置相关操作
-    def get_tool_config(self, tool_name, config_key):
-        """获取工具配置"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT config_value FROM tool_configs WHERE tool_name = ? AND config_key = ?",
-            (tool_name, config_key)
-        )
-        result = cursor.fetchone()
-        return result[0] if result else None
-    
-    def set_tool_config(self, tool_name, config_key, config_value):
-        """设置工具配置"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT OR REPLACE INTO tool_configs (tool_name, config_key, config_value) VALUES (?, ?, ?)",
-            (tool_name, config_key, config_value)
-        )
-    
-    # 插件文件夹相关操作
-    def add_folder(self, name, parent_id=None):
-        """添加文件夹"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        
-        # 获取当前父文件夹下的最大排序值
-        cursor.execute(
-            "SELECT MAX(sort_order) FROM plugin_folders WHERE parent_id = ?",
-            (parent_id,)
-        )
-        result = cursor.fetchone()
-        next_sort_order = result[0] + 1 if result[0] is not None else 0
-        
-        # 插入新文件夹
-        cursor.execute(
-            "INSERT INTO plugin_folders (name, parent_id, sort_order) VALUES (?, ?, ?)",
-            (name, parent_id, next_sort_order)
-        )
-        
-        return cursor.lastrowid
-    
-    def delete_folder(self, folder_id):
-        """删除文件夹"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        
-        # 先删除该文件夹下的所有子文件夹
-        cursor.execute("DELETE FROM plugin_folders WHERE parent_id = ?", (folder_id,))
-        
-        # 再删除该文件夹下的所有插件关联
-        cursor.execute("UPDATE plugin_folder_associations SET folder_id = NULL WHERE folder_id = ?", (folder_id,))
-        
-        # 最后删除文件夹本身
-        cursor.execute("DELETE FROM plugin_folders WHERE id = ?", (folder_id,))
-    
-    def update_folder_name(self, folder_id, new_name):
-        """更新文件夹名称"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE plugin_folders SET name = ? WHERE id = ?",
-            (new_name, folder_id)
-        )
-    
-    def get_all_folders(self):
-        """获取所有文件夹，按parent_id和sort_order排序"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, parent_id, sort_order FROM plugin_folders ORDER BY parent_id, sort_order")
-        return cursor.fetchall()
-    
-    def get_folder_plugins(self, folder_id):
-        """获取文件夹下的所有插件及其排序顺序"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT plugin_name, sort_order FROM plugin_folder_associations WHERE folder_id = ? ORDER BY sort_order",
-            (folder_id,)
-        )
-        return [(row[0], row[1]) for row in cursor.fetchall()]
-    
-    def associate_plugin_with_folder(self, plugin_name, folder_id):
-        """关联插件与文件夹，并设置排序顺序"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        
-        # 获取当前文件夹下的最大排序值
-        cursor.execute(
-            "SELECT MAX(sort_order) FROM plugin_folder_associations WHERE folder_id = ?",
-            (folder_id,)
-        )
-        result = cursor.fetchone()
-        next_sort_order = result[0] + 1 if result[0] is not None else 0
-        
-        # 插入或更新关联记录
-        cursor.execute(
-            "INSERT OR REPLACE INTO plugin_folder_associations (plugin_name, folder_id, sort_order) VALUES (?, ?, ?)",
-            (plugin_name, folder_id, next_sort_order)
-        )
-    
-    def get_plugin_folder(self, plugin_name):
-        """获取插件所在的文件夹和排序顺序"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT folder_id, sort_order FROM plugin_folder_associations WHERE plugin_name = ?",
-            (plugin_name,)
-        )
-        result = cursor.fetchone()
-        
-        if result:
-            return result[0], result[1]  # 返回folder_id和sort_order
-        return None, 0  # 默认返回None和0
-    
-    def remove_plugin_from_folder(self, plugin_name):
-        """移除插件与文件夹的关联"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM plugin_folder_associations WHERE plugin_name = ?", (plugin_name,))
-    
-    def update_folder_sort_order(self, folder_id, sort_order):
-        """更新文件夹排序顺序"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE plugin_folders SET sort_order = ? WHERE id = ?",
-            (sort_order, folder_id)
-        )
-    
-    def update_plugin_sort_order(self, plugin_name, sort_order):
-        """更新插件排序顺序"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE plugin_folder_associations SET sort_order = ? WHERE plugin_name = ?",
-            (sort_order, plugin_name)
-        )

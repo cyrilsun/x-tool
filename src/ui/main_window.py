@@ -11,17 +11,30 @@ class CustomTreeWidget(QTreeWidget):
         self.parent_window = parent
     
     def dropEvent(self, event):
+        # 获取拖拽的项目
+        dragged_item = self.currentItem()
+        dragged_data = dragged_item.data(0, Qt.ItemDataRole.UserRole)
+        
         # 调用父类的dropEvent来处理实际的移动
         super().dropEvent(event)
         
-        # 通知父窗口保存排序顺序
-        if hasattr(self.parent_window, '_save_folder_sort_order'):
+        # 通知父窗口保存排序顺序和文件夹关联
+        if hasattr(self.parent_window, '_save_folder_sort_order') and hasattr(self.parent_window, '_update_plugin_folder_association'):
             from src.db.database import Database
-            db = Database()
-            try:
-                self.parent_window._save_folder_sort_order(db)
-            except Exception as e:
-                print(f"保存文件夹排序失败: {e}")
+            with Database() as db:
+                try:
+                    # 如果拖拽的是插件，更新其文件夹关联
+                    if dragged_data and dragged_data.get('type') == 'tool':
+                        tool_name = dragged_data.get('name')
+                        if tool_name:
+                            # 获取移动后的项目（因为父类的dropEvent已经移动了项目）
+                            moved_item = self.currentItem()
+                            self.parent_window._update_plugin_folder_association(db, tool_name, moved_item)
+                    
+                    # 保存所有项目的排序顺序
+                    self.parent_window._save_folder_sort_order(db)
+                except Exception as e:
+                    print(f"保存拖拽结果失败: {e}")
 
 
 class MainWindow(QMainWindow):
@@ -472,7 +485,7 @@ class MainWindow(QMainWindow):
         try:
             # 添加到数据库，使用上下文管理器
             with Database() as db:
-                folder_id = db.add_folder(folder_name, parent_id)
+                folder_id = db.folder_manager.add_folder(folder_name, parent_id)
             
             # 添加到界面
             folder_item = self.add_folder(folder_name, parent_item, folder_id)
@@ -519,7 +532,7 @@ class MainWindow(QMainWindow):
                 from src.db.database import Database
                 # 使用上下文管理器更新数据库
                 with Database() as db:
-                    db.update_folder_name(folder_id, new_name)
+                    db.folder_manager.update_folder_name(folder_id, new_name)
                 
                 # 更新界面文本
                 folder_item.setText(0, new_name)
@@ -565,7 +578,7 @@ class MainWindow(QMainWindow):
                 
                 # 从数据库中删除，使用上下文管理器
                 with Database() as db:
-                    db.delete_folder(folder_id)
+                    db.folder_manager.delete_folder(folder_id)
             
             # 从父项中移除
             parent = folder_item.parent()
@@ -667,7 +680,7 @@ class MainWindow(QMainWindow):
                     
                     # 重新关联插件与文件夹
                     # associate_plugin_with_folder方法已经包含了先删除原有关联的逻辑
-                    db.associate_plugin_with_folder(plugin_name, folder_id)
+                    db.plugin_association_manager.associate_plugin_with_folder(plugin_name, folder_id)
                     
                     # 更新插件文件夹映射
                     self.plugin_folder_map[plugin_name] = folder_id
@@ -806,7 +819,7 @@ class MainWindow(QMainWindow):
             # 1. 从数据库中删除插件与文件夹的关联
             from src.db.database import Database
             with Database() as db:
-                db.remove_plugin_from_folder(plugin_name)
+                db.plugin_association_manager.remove_plugin_from_folder(plugin_name)
             
             # 2. 从插件文件夹中删除插件文件
             plugin_dir = get_plugin_directory()
@@ -892,16 +905,24 @@ class MainWindow(QMainWindow):
         event.accept()
     
     def on_item_moved(self, item, old_parent, old_index, new_parent, new_index):
-        """处理项目移动事件，保存文件夹排序顺序"""
+        """处理项目移动事件，保存文件夹排序顺序和插件关联"""
         # 从数据库模块导入Database类
         from src.db.database import Database
-        db = Database()
+        
+        item_data = item.data(0, Qt.ItemDataRole.UserRole)
         
         try:
-            # 更新所有文件夹的排序顺序
-            self._save_folder_sort_order(db)
+            with Database() as db:
+                # 如果移动的是插件，更新其文件夹关联
+                if item_data and item_data.get('type') == 'tool':
+                    tool_name = item_data.get('name')
+                    if tool_name:
+                        self._update_plugin_folder_association(db, tool_name, item)
+                
+                # 更新所有文件夹的排序顺序
+                self._save_folder_sort_order(db)
         except Exception as e:
-            print(f"保存文件夹排序失败: {e}")
+            print(f"保存移动结果失败: {e}")
     
     def _update_plugin_folder_association(self, db, plugin_name, item):
         """更新插件与文件夹的关联"""
@@ -916,24 +937,18 @@ class MainWindow(QMainWindow):
                     # 获取插件在新文件夹中的索引
                     sort_order = parent.indexOfChild(item)
                     print(f"插件 {plugin_name} 被拖拽到文件夹 {parent_data.get('name')}，新排序: {sort_order}")
-                    # 更新数据库中的文件夹关联和排序顺序
-                    conn = db.get_connection()
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "UPDATE plugin_folder_associations SET folder_id = ?, sort_order = ? WHERE plugin_name = ?",
-                        (folder_id, sort_order, plugin_name)
-                    )
-                    conn.commit()
-                    conn.close()
+                    # 使用业务管理器更新数据库中的文件夹关联和排序顺序
+                    db.plugin_association_manager.associate_plugin_with_folder(plugin_name, folder_id)
+                    db.plugin_association_manager.update_plugin_sort_order(plugin_name, sort_order)
         else:
             # 插件在根目录
             # 更新插件排序顺序
             sort_order = self.tool_list_widget.indexOfTopLevelItem(item)
             if sort_order >= 0:
                 # 先确保插件与根目录关联
-                db.associate_plugin_with_folder(plugin_name, None)
+                db.plugin_association_manager.associate_plugin_with_folder(plugin_name, None)
                 # 然后更新排序顺序
-                db.update_plugin_sort_order(plugin_name, sort_order)
+                db.plugin_association_manager.update_plugin_sort_order(plugin_name, sort_order)
 
     def _save_folder_sort_order(self, db):
         """保存所有文件夹和工具的排序顺序到数据库"""
@@ -949,7 +964,7 @@ class MainWindow(QMainWindow):
                     folder_id = item_data.get("folder_id")
                     if folder_id:
                         print(f"更新文件夹排序: {item_data.get('name')} (ID: {folder_id}) -> 排序: {i}")
-                        db.update_folder_sort_order(folder_id, i)
+                        db.folder_manager.update_folder_sort_order(folder_id, i)
                         
                         # 遍历文件夹内的项目，更新其排序顺序
                         for j in range(item.childCount()):
@@ -961,12 +976,12 @@ class MainWindow(QMainWindow):
                                     child_folder_id = child_data.get("folder_id")
                                     if child_folder_id:
                                         print(f"更新子文件夹排序: {child_data.get('name')} (ID: {child_folder_id}) -> 排序: {j}")
-                                        db.update_folder_sort_order(child_folder_id, j)
+                                        db.folder_manager.update_folder_sort_order(child_folder_id, j)
                                 elif child_data.get("type") == "tool":
                                     tool_name = child_data.get("name")
                                     if tool_name:
                                         print(f"更新文件夹内插件排序: {tool_name} -> 排序: {j}")
-                                        db.update_plugin_sort_order(tool_name, j)
+                                        db.plugin_association_manager.update_plugin_sort_order(tool_name, j)
                                         
                                         # 更新插件的文件夹关联
                                         self._update_plugin_folder_association(db, tool_name, child_item)
@@ -974,7 +989,7 @@ class MainWindow(QMainWindow):
                     tool_name = item_data.get("name")
                     if tool_name:
                         print(f"更新根目录插件排序: {tool_name} -> 排序: {i}")
-                        db.update_plugin_sort_order(tool_name, i)
+                        db.plugin_association_manager.update_plugin_sort_order(tool_name, i)
                         
                         # 更新插件的文件夹关联
                         self._update_plugin_folder_association(db, tool_name, item)
@@ -984,7 +999,7 @@ class MainWindow(QMainWindow):
     def _load_folder_structure(self, db):
         """从数据库加载文件夹结构"""
         # 获取所有文件夹
-        folders = db.get_all_folders()
+        folders = db.folder_manager.get_all_folders()
         
         # 按parent_id分组
         folders_by_parent = {}

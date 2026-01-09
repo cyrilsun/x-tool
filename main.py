@@ -3,9 +3,8 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 from src.config.app_config import VERSION
-from src.plugins.plugin_manager import load_plugins, import_plugin, backup_plugins, restore_plugins
+from src.plugins.plugin_manager import load_plugins
 from src.ui.main_window import MainWindow
-from src.utils.app_utils import show_about_dialog
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
