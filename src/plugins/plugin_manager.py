@@ -113,6 +113,26 @@ def load_plugins(window):
         if not any(plugin_name == p[0] for folder_plugins in plugins_by_folder.values() for p in folder_plugins):
             window.tool_manager.add_tool(plugin_name, plugin)
     
+    # 调整首页位置
+    with Database() as db:
+        home_sort_order = db.config_manager.get_home_page_sort_order()
+        
+        # 获取当前首页位置
+        current_home_index = -1
+        for i in range(window.tool_list_widget.topLevelItemCount()):
+            item = window.tool_list_widget.topLevelItem(i)
+            item_data = item.data(0, Qt.ItemDataRole.UserRole)
+            if item_data and item_data.get("type") == "home":
+                current_home_index = i
+                break
+        
+        # 如果首页存在且位置需要调整
+        if current_home_index != -1 and current_home_index != home_sort_order:
+            # 移除首页项
+            home_item = window.tool_list_widget.takeTopLevelItem(current_home_index)
+            # 在保存的位置插入首页项
+            window.tool_list_widget.insertTopLevelItem(home_sort_order, home_item)
+    
     return plugin_map
 
 

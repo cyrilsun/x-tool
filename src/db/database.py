@@ -4,6 +4,7 @@ from .db_init import init_database
 from .models.folder import FolderManager
 from .models.plugin import PluginManager
 from .models.plugin_association import PluginAssociationManager
+from .models.config import ConfigManager
 
 class Database:
     """SQLite数据库管理类 - 只负责核心连接管理和初始化"""
@@ -24,6 +25,7 @@ class Database:
         self.folder_manager = FolderManager(self)
         self.plugin_manager = PluginManager(self)
         self.plugin_association_manager = PluginAssociationManager(self)
+        self.config_manager = ConfigManager(self)
     
     def _init_db_without_context(self):
         """不使用上下文管理器初始化数据库（仅用于__init__）"""

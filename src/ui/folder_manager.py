@@ -198,16 +198,24 @@ class FolderManager:
         return False
 
     def _save_folder_sort_order(self, db):
-        """保存文件夹排序顺序"""
-        # 保存顶层文件夹排序
+        """保存文件夹排序顺序、顶层插件排序顺序和首页排序位置"""
+        # 保存顶层项目排序（包括文件夹、顶层插件和首页）
         for i in range(self.main_window.tool_list_widget.topLevelItemCount()):
             item = self.main_window.tool_list_widget.topLevelItem(i)
             item_data = item.data(0, Qt.ItemDataRole.UserRole)
             
-            if item_data.get("type") == "folder":
+            if item_data.get("type") == "home":
+                # 保存首页排序位置
+                db.config_manager.set_home_page_sort_order(i)
+            elif item_data.get("type") == "folder":
                 folder_id = item_data.get("folder_id")
                 if folder_id:
                     db.folder_manager.update_folder_sort_order(folder_id, i)
+            elif item_data.get("type") == "tool":
+                plugin_name = item_data.get("name")
+                if plugin_name:
+                    # 更新顶层插件的排序顺序（folder_id为None表示顶层插件）
+                    db.plugin_association_manager.update_plugin_sort_order(plugin_name, i)
             
             # 保存子文件夹排序
             for j in range(item.childCount()):
@@ -218,6 +226,11 @@ class FolderManager:
                     child_folder_id = child_data.get("folder_id")
                     if child_folder_id:
                         db.folder_manager.update_folder_sort_order(child_folder_id, j)
+                elif child_data.get("type") == "tool":
+                    plugin_name = child_data.get("name")
+                    if plugin_name:
+                        # 更新文件夹内插件的排序顺序
+                        db.plugin_association_manager.update_plugin_sort_order(plugin_name, j)
 
     def _load_folder_structure(self, db):
         """加载文件夹结构"""
