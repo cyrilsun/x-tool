@@ -62,6 +62,7 @@ Thumbs.db
 .cache/
 bak/
 data/
+log/
 
 # X-Tool特定文件
 x_tool.db

@@ -5,8 +5,12 @@ from PyQt6.QtWidgets import QApplication
 from src.config.app_config import VERSION
 from src.plugins.plugin_manager import load_plugins
 from src.ui.main_window import MainWindow
+from src.utils.logger import logger
 
 if __name__ == "__main__":
+    # 记录应用程序启动信息
+    logger.info(f"X-Tool v{VERSION} 正在启动...")
+    
     app = QApplication(sys.argv)
     
     app.setApplicationName("X-Tool")

@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 from src.db.database import Database
 from src.plugins.plugin_loader import PluginLoader, get_plugin_directory
+from src.utils.logger import logger
 
 
 def load_plugins(window):
@@ -180,9 +181,9 @@ def import_plugin(window):
             plugin_name_without_ext = os.path.splitext(file_name)[0]
             
             # 复制文件并打印调试信息
-            print(f"正在复制插件文件: {file_path} -> {destination_path}")
+            logger.info(f"正在复制插件文件: {file_path} -> {destination_path}")
             shutil.copy2(file_path, destination_path)
-            print(f"插件文件复制成功，目标文件存在: {os.path.exists(destination_path)}")
+            logger.info(f"插件文件复制成功，目标文件存在: {os.path.exists(destination_path)}")
             
             # 如果是覆盖现有插件，删除所有与该插件相关的关联关系
             with Database() as db:
@@ -257,8 +258,8 @@ def import_plugin(window):
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
-            print(f"导入插件失败: {e}")
-            traceback.print_exc()
+            logger.error(f"导入插件失败: {e}")
+            logger.error(traceback.format_exc())
 
 
 def backup_plugins(window):
@@ -327,8 +328,8 @@ def backup_plugins(window):
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
-            print(f"备份插件失败: {e}")
-            traceback.print_exc()
+            logger.error(f"备份插件失败: {e}")
+            logger.error(traceback.format_exc())
 
 
 def restore_plugins(window):
@@ -482,5 +483,5 @@ def restore_plugins(window):
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
-            print(f"恢复插件失败: {e}")
-            traceback.print_exc()
+            logger.error(f"恢复插件失败: {e}")
+            logger.error(traceback.format_exc())

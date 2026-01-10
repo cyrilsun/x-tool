@@ -6,6 +6,7 @@ import marshal
 import types
 from typing import List, Dict, Any, Optional
 from src.plugins.base_plugin import BasePlugin
+from src.utils.logger import logger
 
 
 def load_pyc_module(module_name, module_path):
@@ -111,7 +112,7 @@ class PluginLoader:
                 try:
                     module = load_pyc_module(plugin_name, plugin_path)
                 except Exception as pyc_error:
-                    print(f"加载 .pyc 插件 {plugin_name} 失败: {pyc_error}")
+                    logger.error(f"加载 .pyc 插件 {plugin_name} 失败: {pyc_error}")
                     # 尝试使用对应的 .py 文件
                     py_file_path = plugin_path[:-1]  # 去掉 c 扩展名
                     if os.path.exists(py_file_path):
@@ -139,7 +140,7 @@ class PluginLoader:
                             "type": "single_file"
                         }
         except Exception as e:
-            print(f"获取插件 {plugin_info['name']} 详细信息失败: {e}")
+            logger.error(f"获取插件 {plugin_info['name']} 详细信息失败: {e}")
         
         # 如果获取详细信息失败，返回基本信息
         return {
@@ -198,8 +199,8 @@ class PluginLoader:
                 try:
                     module = load_pyc_module(plugin_name, plugin_path)
                 except Exception as pyc_error:
-                    print(f"加载 .pyc 插件 {plugin_name} 失败: {pyc_error}")
-                    print(f"尝试使用 .py 文件替代...")
+                    logger.error(f"加载 .pyc 插件 {plugin_name} 失败: {pyc_error}")
+                    logger.info(f"尝试使用 .py 文件替代...")
                     # 尝试使用对应的 .py 文件
                     py_file_path = plugin_path[:-1]  # 去掉 c 扩展名
                     if os.path.exists(py_file_path):
@@ -234,7 +235,7 @@ class PluginLoader:
                         return plugin
 
         except Exception as e:
-            print(f"加载插件 {plugin_name} 失败: {e}")
+            logger.error(f"加载插件 {plugin_name} 失败: {e}")
             return None
         return None
 

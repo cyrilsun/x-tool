@@ -7,6 +7,7 @@ from src.ui.folder_manager import FolderManager
 from src.ui.menu_manager import MenuManager
 from src.ui.tool_manager import ToolManager
 from src.ui.welcome_page import WelcomePageManager
+from src.utils.logger import logger
 
 
 class MainWindow(QMainWindow):
@@ -200,4 +201,4 @@ class MainWindow(QMainWindow):
                 # 更新所有文件夹的排序顺序
                 self.folder_manager._save_folder_sort_order(db)
         except Exception as e:
-            print(f"保存移动结果失败: {e}")
+            logger.error(f"保存移动结果失败: {e}")

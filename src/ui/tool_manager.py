@@ -2,6 +2,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QTreeWidgetItem, QMessageBox
 
+from src.utils.logger import logger
+
 
 class ToolManager:
     def __init__(self, main_window):
@@ -140,11 +142,11 @@ class ToolManager:
                     file_path = os.path.join(plugin_dir, f"{plugin_file_name}{ext}")
                     if os.path.exists(file_path):
                         os.remove(file_path)
-                        print(f"成功删除插件文件: {file_path}")
+                        logger.info(f"成功删除插件文件: {file_path}")
                     else:
-                        print(f"插件文件不存在: {file_path}")
+                        logger.info(f"插件文件不存在: {file_path}")
             else:
-                print(f"无法获取插件文件名，插件名: {tool_name}")
+                logger.warning(f"无法获取插件文件名，插件名: {tool_name}")
                 # 如果无法获取文件名，尝试通过插件名查找文件
                 plugin_dir = get_plugin_directory()
                 for item in os.listdir(plugin_dir):
@@ -168,16 +170,16 @@ class ToolManager:
                                         if plugin_instance.name == tool_name:
                                             # 找到了匹配的插件文件，删除它
                                             os.remove(file_path)
-                                            print(f"成功删除插件文件: {file_path}")
+                                            logger.info(f"成功删除插件文件: {file_path}")
                                             # 如果是.py文件，也删除对应的.pyc文件
                                             if item.endswith(".py"):
                                                 pyc_path = os.path.join(plugin_dir, f"{module_name}.pyc")
                                                 if os.path.exists(pyc_path):
                                                     os.remove(pyc_path)
-                                                    print(f"成功删除插件文件: {pyc_path}")
+                                                    logger.info(f"成功删除插件文件: {pyc_path}")
                                             break
                         except Exception as e:
-                            print(f"检查插件文件 {item} 失败: {e}")
+                            logger.error(f"检查插件文件 {item} 失败: {e}")
             
             # 从工具列表中移除
             if tool_item.parent():
@@ -210,7 +212,7 @@ class ToolManager:
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
-            print(f"删除插件失败: {e}")
+            logger.error(f"删除插件失败: {e}")
 
     def import_plugin_to_folder(self, folder_item):
         """将插件导入到指定文件夹"""
@@ -287,7 +289,7 @@ class ToolManager:
                                 plugin_name = plugin_instance.name
                                 break
                 except Exception as e:
-                    print(f"加载插件获取名称失败: {e}")
+                    logger.error(f"加载插件获取名称失败: {e}")
                     # 如果加载失败，回退到使用文件名作为插件名称
                     plugin_name = module_name
                 
@@ -305,7 +307,7 @@ class ToolManager:
                         # 更新插件文件夹映射
                         self.main_window.plugin_folder_map[plugin_name] = folder_id
                 except Exception as e:
-                    print(f"关联插件与文件夹失败: {e}")
+                    logger.error(f"关联插件与文件夹失败: {e}")
                     raise
                 
                 # 刷新插件列表（与文件菜单的导入插件保持一致的逻辑）
@@ -346,4 +348,4 @@ class ToolManager:
                 msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
                 msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
                 msg_box.exec()
-                print(f"导入插件失败: {e}")
+                logger.error(f"导入插件失败: {e}")

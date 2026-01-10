@@ -3,6 +3,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QTreeWidgetItem, QInputDialog, QMessageBox, QStyle
 
 from src.db.database import Database
+from src.utils.logger import logger
 
 
 class FolderManager:
@@ -80,7 +81,7 @@ class FolderManager:
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
-            print(f"创建文件夹失败: {e}")
+            logger.error(f"创建文件夹失败: {e}")
 
     def _edit_folder_name(self, folder_item):
         """编辑文件夹名称"""
@@ -126,7 +127,7 @@ class FolderManager:
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
-            print(f"编辑文件夹名称失败: {e}")
+            logger.error(f"编辑文件夹名称失败: {e}")
 
     def _delete_folder(self, folder_item):
         """删除文件夹"""
@@ -180,7 +181,7 @@ class FolderManager:
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
-            print(f"删除文件夹失败: {e}")
+            logger.error(f"删除文件夹失败: {e}")
 
     def _is_folder_name_exists(self, folder_name, parent_item, exclude_item=None):
         """检查文件夹名称是否已存在"""
