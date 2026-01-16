@@ -46,12 +46,18 @@ def build_macos(args):
     """构建macOS版本"""
     print("正在构建macOS版本...")
     
+    # 获取PyQt6翻译文件路径
+    import PyQt6
+    pyqt_path = os.path.dirname(PyQt6.__file__)
+    translations_src = os.path.join(pyqt_path, 'Qt6', 'translations')
+    
     cmd = [
         "pyinstaller",
         "--name=X-Tool",
         "--windowed",
         "--osx-bundle-identifier=com.xtool.app",
         "--add-data=resources:resources",
+        f"--add-data={translations_src}:translations",
         "--collect-data=src.plugins",
         "--hidden-import=pymysql",
         "--hidden-import=PyQt6",
@@ -77,11 +83,17 @@ def build_windows(args):
     """构建Windows版本"""
     print("正在构建Windows版本...")
     
+    # 获取PyQt6翻译文件路径
+    import PyQt6
+    pyqt_path = os.path.dirname(PyQt6.__file__)
+    translations_src = os.path.join(pyqt_path, 'Qt6', 'translations')
+    
     cmd = [
         "pyinstaller",
         "--name=X-Tool",
         "--windowed",
         "--add-data=resources;resources",
+        f"--add-data={translations_src};translations",
         "--collect-data=src.plugins",
         "--hidden-import=pymysql",
         "--hidden-import=PyQt6",
@@ -106,11 +118,17 @@ def build_linux(args):
     """构建Linux版本"""
     print("正在构建Linux版本...")
     
+    # 获取PyQt6翻译文件路径
+    import PyQt6
+    pyqt_path = os.path.dirname(PyQt6.__file__)
+    translations_src = os.path.join(pyqt_path, 'Qt6', 'translations')
+    
     cmd = [
         "pyinstaller",
         "--name=X-Tool",
         "--windowed",
         "--add-data=resources:resources",
+        f"--add-data={translations_src}:translations",
         "--collect-data=src.plugins",
         "--hidden-import=pymysql",
         "--hidden-import=PyQt6",
