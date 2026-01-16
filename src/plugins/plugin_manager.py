@@ -20,56 +20,77 @@ def load_plugins(window):
     # 先加载所有插件
     plugin_map = {}
     for plugin in plugins:
-        plugin_map[plugin.name] = plugin
-        
-        plugin.setStyleSheet("""
-            QWidget {
-                font-size: 16px;
-            }
-            QGroupBox {
-                font-size: 18px;
-                font-weight: bold;
-            }
-            QLabel {
-                font-size: 16px;
-            }
-            QComboBox {
-                font-size: 16px;
-                padding: 8px;
-            }
-            QTextEdit {
-                font-size: 16px;
-            }
-            QPushButton {
-                font-size: 16px;
-                font-weight: bold;
-            }
-        """)
+        try:
+            plugin_map[plugin.name] = plugin
+            
+            plugin.setStyleSheet("""
+                QWidget {
+                    font-size: 16px;
+                }
+                QGroupBox {
+                    font-size: 18px;
+                    font-weight: bold;
+                }
+                QLabel {
+                    font-size: 16px;
+                }
+                QComboBox {
+                    font-size: 16px;
+                    padding: 8px;
+                }
+                QTextEdit {
+                    font-size: 16px;
+                }
+                QPushButton {
+                    font-size: 16px;
+                    font-weight: bold;
+                }
+            """)
 
-        plugin.on_activate()
+            try:
+                plugin.on_activate()
+            except Exception as e:
+                logger.error(f"激活插件 {plugin.name} 失败: {e}")
+                logger.error(traceback.format_exc())
+                # 继续加载其他插件，不中断整个流程
+        except Exception as e:
+            logger.error(f"处理插件 {plugin.name} 失败: {e}")
+            logger.error(traceback.format_exc())
+            # 继续处理其他插件，不中断整个流程
     
     # 加载文件夹结构
-    with Database() as db:
-        window.folder_manager._load_folder_structure(db)
+    try:
+        with Database() as db:
+            window.folder_manager._load_folder_structure(db)
+            
+            # 获取所有插件的文件夹关联和排序顺序
+            cursor = db.get_connection().cursor()
+            plugin_associations = cursor.execute(
+                "SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations"
+            ).fetchall()
         
-        # 获取所有插件的文件夹关联和排序顺序
-        cursor = db.get_connection().cursor()
-        plugin_associations = cursor.execute(
-            "SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations"
-        ).fetchall()
-    
-    # 按folder_id和sort_order分组
-    plugins_by_folder = {}
-    for plugin_name, folder_id, sort_order in plugin_associations:
-        if folder_id not in plugins_by_folder:
-            plugins_by_folder[folder_id] = []
-        plugins_by_folder[folder_id].append((plugin_name, sort_order))
+        # 按folder_id和sort_order分组
+        plugins_by_folder = {}
+        for plugin_name, folder_id, sort_order in plugin_associations:
+            if folder_id not in plugins_by_folder:
+                plugins_by_folder[folder_id] = []
+            plugins_by_folder[folder_id].append((plugin_name, sort_order))
+    except Exception as e:
+        logger.error(f"加载文件夹结构和插件关联失败: {e}")
+        logger.error(traceback.format_exc())
+        # 创建默认的空结构，确保应用可以继续运行
+        plugins_by_folder = {}
     
     # 按排序顺序加载根目录插件
     root_plugins = sorted(plugins_by_folder.get(None, []), key=lambda x: x[1])
     for plugin_name, sort_order in root_plugins:
         if plugin_name in plugin_map:
-            window.tool_manager.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
+            try:
+                window.tool_manager.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
+            except Exception as e:
+                logger.error(f"为根目录添加工具 {plugin_name} 失败: {e}")
+                logger.error(traceback.format_exc())
+                # 继续添加其他工具，不中断整个流程
     
     # 按排序顺序加载文件夹内的插件
     for folder_id, plugin_list in plugins_by_folder.items():
@@ -102,17 +123,32 @@ def load_plugins(window):
             sorted_plugins = sorted(plugin_list, key=lambda x: x[1])
             for plugin_name, sort_order in sorted_plugins:
                 if plugin_name in plugin_map:
-                    window.tool_manager.add_tool_to_folder(plugin_name, plugin_map[plugin_name], folder_item, sort_order)
+                    try:
+                        window.tool_manager.add_tool_to_folder(plugin_name, plugin_map[plugin_name], folder_item, sort_order)
+                    except Exception as e:
+                        logger.error(f"为文件夹 {folder_id} 添加工具 {plugin_name} 失败: {e}")
+                        logger.error(traceback.format_exc())
+                        # 继续添加其他工具，不中断整个流程
         else:
             # 文件夹不存在，将插件添加到根目录
             for plugin_name, sort_order in plugin_list:
                 if plugin_name in plugin_map:
-                    window.tool_manager.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
+                    try:
+                        window.tool_manager.add_tool(plugin_name, plugin_map[plugin_name], sort_order)
+                    except Exception as e:
+                        logger.error(f"文件夹不存在时为根目录添加工具 {plugin_name} 失败: {e}")
+                        logger.error(traceback.format_exc())
+                        # 继续添加其他工具，不中断整个流程
     
     # 加载没有关联的插件
     for plugin_name, plugin in plugin_map.items():
         if not any(plugin_name == p[0] for folder_plugins in plugins_by_folder.values() for p in folder_plugins):
-            window.tool_manager.add_tool(plugin_name, plugin)
+            try:
+                window.tool_manager.add_tool(plugin_name, plugin)
+            except Exception as e:
+                logger.error(f"加载没有关联的插件 {plugin_name} 失败: {e}")
+                logger.error(traceback.format_exc())
+                # 继续添加其他工具，不中断整个流程
     
     # 调整首页位置
     with Database() as db:
