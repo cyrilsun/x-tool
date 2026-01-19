@@ -5,12 +5,13 @@ from .models.folder import FolderManager
 from .models.plugin import PluginManager
 from .models.plugin_association import PluginAssociationManager
 from .models.config import ConfigManager
+from src.utils.path_utils import get_data_directory
 
 class Database:
     """SQLite数据库管理类 - 只负责核心连接管理和初始化"""
     def __init__(self, db_name="x_tool.db"):
         # 数据库文件路径，存储在data目录下
-        self.db_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", db_name)
+        self.db_path = os.path.join(get_data_directory(), db_name)
         
         # 当前上下文中的连接
         self._connection = None

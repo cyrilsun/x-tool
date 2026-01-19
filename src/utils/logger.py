@@ -7,9 +7,10 @@ import sys
 import glob
 from datetime import datetime, timedelta
 from logging.handlers import TimedRotatingFileHandler
+from src.utils.path_utils import get_log_directory
 
 # 定义日志目录
-LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'log')
+LOG_DIR = get_log_directory()
 
 # 确保日志目录存在
 if not os.path.exists(LOG_DIR):

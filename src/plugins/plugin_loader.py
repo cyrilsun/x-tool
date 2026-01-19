@@ -7,6 +7,7 @@ import types
 from typing import List, Dict, Any, Optional
 from src.plugins.base_plugin import BasePlugin
 from src.utils.logger import logger
+from src.utils.path_utils import get_plugin_directory
 
 
 def load_pyc_module(module_name, module_path):
@@ -59,33 +60,6 @@ def load_pyc_module(module_name, module_path):
         module.__spec__ = importlib.machinery.ModuleSpec(module_name, None)
         exec(code, module.__dict__)
         return module
-
-
-def get_plugin_directory() -> str:
-    """获取插件目录路径，从.app同级目录查找"""
-    plugin_dir = "plugins"
-
-    if getattr(sys, 'frozen', False):
-        executable_path = sys.executable
-        exe_dir = os.path.dirname(executable_path)
-
-        if sys.platform == 'darwin':
-            # macOS .app bundle structure
-            if executable_path.endswith('/Contents/MacOS/X-Tool'):
-                # Get the directory containing the .app bundle
-                app_bundle_path = os.path.dirname(os.path.dirname(os.path.dirname(executable_path)))
-                app_parent_dir = os.path.dirname(app_bundle_path)
-                sibling_plugins = os.path.join(app_parent_dir, "plugins")
-                if os.path.exists(sibling_plugins):
-                    return sibling_plugins
-        else:
-            # Windows and Linux
-            sibling_plugins = os.path.join(exe_dir, "plugins")
-            if os.path.exists(sibling_plugins):
-                return sibling_plugins
-
-    # Default to current directory plugins, but ensure it's absolute
-    return os.path.abspath(plugin_dir)
 
 
 class PluginLoader:
