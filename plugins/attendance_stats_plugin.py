@@ -1,17 +1,16 @@
 import os
-import pandas as pd
-from typing import List, Dict, Any
 from datetime import datetime
+from typing import List
+
+import pandas as pd
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, 
-    QGroupBox, QMessageBox, QLineEdit, QComboBox, QTableWidget, 
-    QTableWidgetItem, QHeaderView, QCheckBox, QScrollArea, 
+    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog,
+    QGroupBox, QMessageBox, QLineEdit, QComboBox, QScrollArea,
     QTextEdit, QWidget, QFrame
 )
-from PyQt6 import QtCore
-from src.utils.logger import logger
 
 from src.plugins.base_plugin import BasePlugin
+from src.utils.logger import logger
 
 
 class AttendanceStats:

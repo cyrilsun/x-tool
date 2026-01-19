@@ -1,8 +1,9 @@
-import os
-import pandas as pd
-from typing import List, Dict, Any, Tuple
 from datetime import datetime
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, QLineEdit, QComboBox, QDialog, QTextEdit, QScrollArea, QCheckBox, QSpinBox, QWidget, QTableWidget, QTableWidgetItem, QHeaderView, QSplitter, QFrame, QListWidget
+from typing import List, Dict, Any
+
+import pandas as pd
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, \
+    QLineEdit, QComboBox, QTextEdit, QScrollArea, QCheckBox, QWidget, QFrame, QListWidget
 
 from src.plugins.base_plugin import BasePlugin
 from src.utils.logger import logger
