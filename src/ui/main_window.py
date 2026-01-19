@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMainWindow, QSplitter, QWidget, QHBoxLayout, \
-    QStackedWidget
+    QStackedWidget, QVBoxLayout, QLineEdit
 
 from src.ui.custom_tree_widget import CustomTreeWidget
 from src.ui.folder_manager import FolderManager
@@ -100,6 +100,37 @@ class MainWindow(QMainWindow):
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         main_layout.addWidget(self.splitter)
 
+        # 创建左侧容器
+        left_container = QWidget()
+        left_layout = QVBoxLayout(left_container)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
+
+        # 搜索框容器
+        search_container = QWidget()
+        search_container.setStyleSheet("background-color: #ffffff; border-right: 1px solid #dcdde1;")
+        search_layout = QVBoxLayout(search_container)
+        search_layout.setContentsMargins(15, 10, 15, 5)
+        
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("搜索插件...")
+        self.search_input.setStyleSheet("""
+            QLineEdit {
+                padding: 6px 10px;
+                border: 1px solid #dcdde1;
+                border-radius: 6px;
+                background-color: #f8f9fa;
+                font-size: 13px;
+                color: #2f3640;
+            }
+            QLineEdit:focus {
+                border: 1px solid #3498db;
+                background-color: #ffffff;
+            }
+        """)
+        search_layout.addWidget(self.search_input)
+        left_layout.addWidget(search_container)
+
         # 创建左侧工具列表（树形结构）
         self.tool_list_widget = CustomTreeWidget(self)
         self.tool_list_widget.setMinimumWidth(220)
@@ -178,7 +209,8 @@ class MainWindow(QMainWindow):
         self.tool_list_widget.setDropIndicatorShown(True)
         self.tool_list_widget.setDragDropMode(self.tool_list_widget.DragDropMode.InternalMove)
         
-        self.splitter.addWidget(self.tool_list_widget)
+        left_layout.addWidget(self.tool_list_widget)
+        self.splitter.addWidget(left_container)
 
         # 创建右侧工具使用界面容器
         self.tool_stack_widget = QStackedWidget()
@@ -203,11 +235,56 @@ class MainWindow(QMainWindow):
         self.tool_list_widget.currentItemChanged.connect(self.tool_manager.on_tool_selected)
         self.tool_list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tool_list_widget.customContextMenuRequested.connect(self.menu_manager.show_context_menu)
+        self.search_input.textChanged.connect(self.filter_plugins)
 
         # 初始化界面
         self.welcome_page_manager.add_home_button()
         self.welcome_page_manager.init_welcome_page()
         self.menu_manager.create_menus()
+
+
+    def filter_plugins(self, text):
+        """模糊搜索过滤插件"""
+        search_text = text.strip().lower()
+        
+        # 递归遍历所有项
+        for i in range(self.tool_list_widget.topLevelItemCount()):
+            item = self.tool_list_widget.topLevelItem(i)
+            self._filter_item(item, search_text)
+
+    def _filter_item(self, item, search_text):
+        """递归过滤单个项目"""
+        item_visible = False
+        item_text = item.text(0).lower()
+        
+        # 首页始终显示
+        item_data = item.data(0, Qt.ItemDataRole.UserRole)
+        if item_data and item_data.get("type") == "home":
+            item.setHidden(False)
+            return True
+
+        # 检查当前项是否匹配
+        if search_text in item_text:
+            item_visible = True
+            
+        # 递归检查子项
+        child_match = False
+        for i in range(item.childCount()):
+            if self._filter_item(item.child(i), search_text):
+                child_match = True
+        
+        # 如果当前项匹配，或其子项有匹配，则显示
+        final_visible = item_visible or child_match
+        item.setHidden(not final_visible)
+        
+        # 如果搜索中且有匹配，展开文件夹
+        if search_text and final_visible and item.childCount() > 0:
+            item.setExpanded(True)
+        elif not search_text and item.childCount() > 0:
+            # 搜索清空时，不强制展开
+            pass
+            
+        return final_visible
 
 
     def dragEnterEvent(self, event):
