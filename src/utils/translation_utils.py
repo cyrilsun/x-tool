@@ -26,7 +26,7 @@ def setup_translation(app):
         # 打包后的环境
         base_path = os.path.dirname(sys.executable)
         qt_translations_path = os.path.join(base_path, 'translations')
-        logger.info(f"打包环境翻译文件路径: {qt_translations_path}")
+        logger.debug(f"打包环境翻译文件路径: {qt_translations_path}")
     else:
         # 开发环境
         # 尝试从PyQt6安装目录获取翻译文件
@@ -34,20 +34,20 @@ def setup_translation(app):
             import PyQt6
             pyqt_path = os.path.dirname(PyQt6.__file__)
             qt_translations_path = os.path.join(pyqt_path, 'Qt6', 'translations')
-            logger.info(f"开发环境PyQt6路径: {pyqt_path}")
-            logger.info(f"开发环境翻译文件路径: {qt_translations_path}")
+            logger.debug(f"开发环境PyQt6路径: {pyqt_path}")
+            logger.debug(f"开发环境翻译文件路径: {qt_translations_path}")
         except Exception as e:
             logger.warning(f"无法获取PyQt6安装路径: {e}")
     
     # 检查翻译文件路径是否存在
     if qt_translations_path:
         if os.path.exists(qt_translations_path):
-            logger.info(f"翻译文件目录存在: {qt_translations_path}")
+            logger.debug(f"翻译文件目录存在: {qt_translations_path}")
             # 查看目录下的文件
             try:
                 files = os.listdir(qt_translations_path)
                 qm_files = [f for f in files if f.endswith('.qm')]
-                logger.info(f"翻译文件列表: {qm_files[:10]}")  # 只显示前10个文件
+                logger.debug(f"翻译文件列表: {qm_files[:10]}")  # 只显示前10个文件
             except Exception as e:
                 logger.warning(f"无法列出翻译文件目录: {e}")
         else:
@@ -65,7 +65,7 @@ def setup_translation(app):
         if translator.load("qt_zh_CN", qt_translations_path):
             app.installTranslator(translator)
             app._translators.append(translator)
-            logger.info("已加载qt_zh_CN.qm翻译文件")
+            logger.debug("已加载qt_zh_CN.qm翻译文件")
             translation_loaded = True
         else:
             logger.warning("未能加载qt_zh_CN.qm翻译文件")
@@ -75,7 +75,7 @@ def setup_translation(app):
             if translator_base.load("qtbase_zh_CN", qt_translations_path):
                 app.installTranslator(translator_base)
                 app._translators.append(translator_base)
-                logger.info("已加载qtbase_zh_CN.qm翻译文件")
+                logger.debug("已加载qtbase_zh_CN.qm翻译文件")
                 translation_loaded = True
             else:
                 logger.warning("未能加载qtbase_zh_CN.qm翻译文件")
@@ -84,6 +84,6 @@ def setup_translation(app):
     if translation_loaded:
         # 强制更新所有翻译
         QCoreApplication.instance().setProperty("retranslate", True)
-        logger.info("已强制更新应用程序翻译")
+        logger.debug("已强制更新应用程序翻译")
     
     return translation_loaded
