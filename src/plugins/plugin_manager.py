@@ -74,6 +74,42 @@ def load_plugins(window):
                     border: none;
                     background-color: transparent;
                 }
+                QScrollBar:vertical {
+                    border: none;
+                    background: rgba(0, 0, 0, 0.05);
+                    width: 8px;
+                    margin: 0px;
+                    border-radius: 4px;
+                }
+                QScrollBar::handle:vertical {
+                    background: #95a5a6;
+                    min-height: 20px;
+                    border-radius: 4px;
+                }
+                QScrollBar::handle:vertical:hover {
+                    background: #7f8c8d;
+                }
+                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                    height: 0px;
+                }
+                QScrollBar:horizontal {
+                    border: none;
+                    background: rgba(0, 0, 0, 0.05);
+                    height: 8px;
+                    margin: 0px;
+                    border-radius: 4px;
+                }
+                QScrollBar::handle:horizontal {
+                    background: #95a5a6;
+                    min-width: 20px;
+                    border-radius: 4px;
+                }
+                QScrollBar::handle:horizontal:hover {
+                    background: #7f8c8d;
+                }
+                QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                    width: 0px;
+                }
             """)
 
             try:

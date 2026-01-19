@@ -12,6 +12,7 @@ class BasePlugin(QWidget, ABC, metaclass=_BasePluginMeta):
         super().__init__()
         self._name = name
         self._description = description
+        self.last_dir = ""
 
     @property
     def name(self) -> str:

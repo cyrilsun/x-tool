@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, QLineEdit, QComboBox, QSpinBox, QCheckBox, QWidget, QScrollArea, QTextEdit
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, QLineEdit, QComboBox, QSpinBox, QCheckBox, QWidget, QScrollArea, QTextEdit, QFrame
 
 from src.plugins.base_plugin import BasePlugin
 from src.utils.logger import logger
@@ -246,8 +246,22 @@ class ExcelSplitPlugin(BasePlugin):
         """
         设置插件UI界面
         """
-        layout = QVBoxLayout(self)
+        # 创建主布局
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        # 创建滚动区域
+        self.main_scroll = QScrollArea()
+        self.main_scroll.setWidgetResizable(True)
+        self.main_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # 创建容器组件
+        container = QWidget()
+        container.setObjectName("pluginContainer")
+        layout = QVBoxLayout(container)
         layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
         # 源文件选择
         source_group = QGroupBox("选择源文件")
@@ -255,9 +269,32 @@ class ExcelSplitPlugin(BasePlugin):
         
         self.source_edit = QLineEdit()
         self.source_edit.setPlaceholderText("请选择要拆分的Excel文件")
+        self.source_edit.setStyleSheet("""
+            QLineEdit {
+                padding: 8px;
+                font-size: 14px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                color: #2c3e50;
+            }
+        """)
         source_layout.addWidget(self.source_edit)
         
         self.select_source_btn = QPushButton("选择Excel文件")
+        self.select_source_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
         self.select_source_btn.clicked.connect(self.select_source_file)
         source_layout.addWidget(self.select_source_btn)
         
@@ -270,10 +307,32 @@ class ExcelSplitPlugin(BasePlugin):
         
         self.output_edit = QLineEdit()
         self.output_edit.setPlaceholderText("请选择输出目录")
+        self.output_edit.setStyleSheet("""
+            QLineEdit {
+                padding: 8px;
+                font-size: 14px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                color: #2c3e50;
+            }
+        """)
         output_layout.addWidget(self.output_edit)
         
         self.select_output_btn = QPushButton("选择输出目录")
-        self.select_output_btn.setStyleSheet("background-color: #9b59b6;") # 稍微区分下颜色
+        self.select_output_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #9b59b6;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #8e44ad;
+            }
+        """)
         self.select_output_btn.clicked.connect(self.select_output_dir)
         output_layout.addWidget(self.select_output_btn)
         
@@ -382,6 +441,19 @@ class ExcelSplitPlugin(BasePlugin):
         description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
         
         self.toggle_description_btn = QPushButton("▼ 展开")
+        self.toggle_description_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f8f9fa;
+                color: #343a40;
+                border: 1px solid #dee2e6;
+                padding: 4px 8px;
+                font-size: 12px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #e9ecef;
+            }
+        """)
         self.toggle_description_btn.clicked.connect(self.toggle_description)
         
         description_header_layout.addWidget(description_title)
@@ -411,23 +483,42 @@ class ExcelSplitPlugin(BasePlugin):
         # 添加到主布局
         layout.addLayout(description_header_layout)
         layout.addWidget(self.description_scroll)
+        
+        # 设置滚动区域
+        self.main_scroll.setWidget(container)
+        main_layout.addWidget(self.main_scroll)
     
     def select_source_file(self):
         """
         选择源Excel文件
         """
+        # 打开文件对话框，支持选择单个Excel文件
         file_path, _ = QFileDialog.getOpenFileName(
-            self,
+            None,
             "选择要拆分的Excel文件",
-            ".",
-            "Excel Files (*.xlsx *.xls)"
+            self.last_dir,
+            "Excel文件 (*.xlsx *.xls);;所有文件 (*)"
         )
         
         if file_path:
+            self.last_dir = os.path.dirname(file_path)
             self.source_edit.setText(file_path)
             self.source_file = file_path
             # 读取文件获取字段列表
             self._load_fields()
+        else:
+            # 如果没选文件，尝试选择文件夹（以防用户习惯）
+            dir_path = QFileDialog.getExistingDirectory(
+                None,
+                "选择源文件夹",
+                self.last_dir
+            )
+            if dir_path:
+                self.last_dir = dir_path
+                self.source_edit.setText(dir_path)
+                self.source_file = dir_path
+                # 如果是文件夹，可能需要处理第一个文件或报错，这里保持原逻辑
+                self._load_fields()
     
     def select_output_dir(self):
         """
@@ -436,10 +527,11 @@ class ExcelSplitPlugin(BasePlugin):
         dir_path = QFileDialog.getExistingDirectory(
             self,
             "选择输出目录",
-            "."
+            self.last_dir
         )
         
         if dir_path:
+            self.last_dir = dir_path
             self.output_edit.setText(dir_path)
             self.output_dir = dir_path
     

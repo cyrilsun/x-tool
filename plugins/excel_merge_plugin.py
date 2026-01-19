@@ -3,7 +3,7 @@ import pandas as pd
 import glob
 from typing import List, Optional
 from datetime import datetime
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, QLineEdit, QComboBox, QDialog, QTextEdit, QScrollArea, QCheckBox, QSpinBox, QWidget
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, QLineEdit, QComboBox, QDialog, QTextEdit, QScrollArea, QCheckBox, QSpinBox, QWidget, QFrame
 
 from src.plugins.base_plugin import BasePlugin
 from src.utils.logger import logger
@@ -566,8 +566,22 @@ class ExcelMergePlugin(BasePlugin):
         self._setup_ui()
 
     def _setup_ui(self):
-        layout = QVBoxLayout(self)
+        # 创建主布局
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        # 创建滚动区域
+        self.main_scroll = QScrollArea()
+        self.main_scroll.setWidgetResizable(True)
+        self.main_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # 创建容器组件
+        container = QWidget()
+        container.setObjectName("pluginContainer")
+        layout = QVBoxLayout(container)
         layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
 
         source_group = QGroupBox("选择源文件")
         source_group.setStyleSheet("""
@@ -880,6 +894,10 @@ class ExcelMergePlugin(BasePlugin):
         layout.addLayout(description_header_layout)
         layout.addWidget(self.description_scroll)
 
+        # 设置滚动区域
+        self.main_scroll.setWidget(container)
+        main_layout.addWidget(self.main_scroll)
+
     def toggle_description(self):
         """
         切换插件说明的展开/收起状态
@@ -898,11 +916,12 @@ class ExcelMergePlugin(BasePlugin):
         file_paths, _ = QFileDialog.getOpenFileNames(
             self,
             "选择Excel文件",
-            "",
+            self.last_dir,
             "Excel文件 (*.xlsx *.xls);;所有文件 (*)"
         )
         
         if file_paths:
+            self.last_dir = os.path.dirname(file_paths[0])
             # 如果选择了多个文件，使用第一个文件的文件夹作为源文件夹
             # 并将所有选择的文件保存下来
             self.source_path = os.path.dirname(file_paths[0])
@@ -919,10 +938,11 @@ class ExcelMergePlugin(BasePlugin):
         dir_path = QFileDialog.getExistingDirectory(
             self,
             "选择源文件夹",
-            ""
+            self.last_dir
         )
         
         if dir_path:
+            self.last_dir = dir_path
             self.source_path = dir_path
             self.selected_files = None  # 重置选择的文件列表
             self.source_edit.setText(dir_path)
@@ -931,9 +951,10 @@ class ExcelMergePlugin(BasePlugin):
         dir_path = QFileDialog.getExistingDirectory(
             self,
             "选择输出文件夹",
-            ""
+            self.last_dir
         )
         if dir_path:
+            self.last_dir = dir_path
             self.output_dir = dir_path
             self.output_edit.setText(dir_path)
     
