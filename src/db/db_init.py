@@ -22,7 +22,7 @@ def init_database(conn):
                 name TEXT NOT NULL,
                 parent_id INTEGER,
                 sort_order INTEGER DEFAULT 0,
-                UNIQUE(name, COALESCE(parent_id, -1)),
+                UNIQUE(name, parent_id),
                 FOREIGN KEY (parent_id) REFERENCES plugin_folders(id) ON DELETE CASCADE
             )
         ''')

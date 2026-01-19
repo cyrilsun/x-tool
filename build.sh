@@ -100,6 +100,52 @@ if [ "$CLEAN" == "true" ]; then
 else
     echo "正在构建 X-Tool ($PLATFORM)${ONEFILE:+, 单文件模式}..."
     python build.py --platform "$PLATFORM" $ONEFILE
+    
+    # 检查构建是否成功
+    if [ $? -eq 0 ]; then
+        echo "正在准备构建输出目录 (dist) 的依赖文件..."
+        
+        # 1. 创建必要的运行目录
+        mkdir -p dist/data dist/log dist/plugins dist/translations
+        
+        # 2. 拷贝内置插件 (如果不包含在可执行文件中)
+        if [ -d "plugins" ]; then
+            echo "正在拷贝插件到 dist/plugins..."
+            cp -r plugins/* dist/plugins/ 2>/dev/null || true
+        fi
+
+        # 3. 处理翻译文件 (特别是 macOS 和通用环境)
+        if [[ -d "translations" ]]; then
+            echo "正在拷贝本地翻译文件..."
+            cp -r translations/* dist/translations/ 2>/dev/null || true
+        fi
+
+        # 4. 特殊处理：获取并拷贝 PyQt6 的中文翻译文件 qt_zh_CN.qm
+        echo "正在查找并拷贝 PyQt6 基础翻译文件..."
+        PYQT_PATH=$(python -c "import PyQt6, os; print(os.path.dirname(PyQt6.__file__))" 2>/dev/null)
+        if [ ! -z "$PYQT_PATH" ]; then
+            # 不同环境路径可能略有不同，尝试几个常见位置
+            QM_FILES=("$PYQT_PATH/Qt6/translations/qt_zh_CN.qm" "$PYQT_PATH/Qt/translations/qt_zh_CN.qm")
+            for QM_SRC in "${QM_FILES[@]}"; do
+                if [ -f "$QM_SRC" ]; then
+                    cp "$QM_SRC" dist/translations/
+                    echo "成功拷贝: $QM_SRC -> dist/translations/"
+                    break
+                fi
+            done
+        fi
+        
+        # 5. 如果是 macOS .app 模式，将这些目录同步到 .app 内部的 Resources 目录下 (可选，根据项目加载逻辑)
+        if [[ ( "$PLATFORM" == "macos" || "$PLATFORM" == "all" ) && -d "dist/X-Tool.app" ]]; then
+            echo "检测到 macOS .app，正在同步资源到 Contents/Resources..."
+            RES_DIR="dist/X-Tool.app/Contents/Resources"
+            mkdir -p "$RES_DIR/data" "$RES_DIR/log" "$RES_DIR/plugins" "$RES_DIR/translations"
+            cp -r dist/translations/* "$RES_DIR/translations/" 2>/dev/null || true
+            cp -r dist/plugins/* "$RES_DIR/plugins/" 2>/dev/null || true
+        fi
+        
+        echo "输出目录准备就绪。"
+    fi
 fi
 
 # 检查构建结果
