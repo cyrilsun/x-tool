@@ -36,24 +36,24 @@ class WelcomePageManager:
         welcome_layout.setSpacing(20)
 
         # 标题
-        title_label = QLabel("欢迎使用 X-Tool")
-        title_label.setFont(QFont("Microsoft YaHei", 36, QFont.Weight.Bold))
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet("color: #4a90e2;")
-        welcome_layout.addWidget(title_label)
+        # title_label = QLabel("欢迎使用 X-Tool")
+        # title_label.setFont(QFont("Microsoft YaHei", 36, QFont.Weight.Bold))
+        # title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # title_label.setStyleSheet("color: #4a90e2;")
+        # welcome_layout.addWidget(title_label)
 
         # 副标题
-        subtitle_label = QLabel("您的一站式工具集合")
-        subtitle_label.setFont(QFont("Microsoft YaHei", 18))
-        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle_label.setStyleSheet("color: #666;")
-        welcome_layout.addWidget(subtitle_label)
+        # subtitle_label = QLabel("您的一站式工具集合")
+        # subtitle_label.setFont(QFont("Microsoft YaHei", 18))
+        # subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # subtitle_label.setStyleSheet("color: #666;")
+        # welcome_layout.addWidget(subtitle_label)
 
         # 分隔符
         welcome_layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
         # 信息说明
-        info_label = QLabel("X-Tool 是一个灵活的工具平台，您可以通过导入插件来扩展功能。\n\n" \
+        info_label = QLabel("您可以通过导入插件来扩展功能。\n\n" \
                            "功能特点：\n" \
                            "• 支持插件导入和管理\n" \
                            "• 灵活的文件夹分类\n" \
