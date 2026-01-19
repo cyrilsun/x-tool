@@ -106,6 +106,7 @@ class MainWindow(QMainWindow):
         self.tool_list_widget.setMaximumWidth(300)
         self.tool_list_widget.setObjectName("toolList")
         self.tool_list_widget.setHeaderHidden(True)
+        self.tool_list_widget.setIndentation(12)  # 减小缩进，使布局更紧凑
         self.tool_list_widget.setStyleSheet("""
             QTreeWidget#toolList {
                 background-color: #ffffff;
@@ -117,13 +118,13 @@ class MainWindow(QMainWindow):
                 show-decoration-selected: 0;
             }
             QTreeWidget#toolList::item {
-                padding: 10px 15px;
+                padding: 8px 12px;
                 margin: 2px 8px;
                 border-radius: 6px;
                 color: #2f3640;
                 font-family: "Segoe UI", "Microsoft YaHei";
                 font-size: 13px;
-                border: none;
+                border: 1px solid transparent;
             }
             QTreeWidget#toolList::item:hover {
                 background-color: #f1f2f6;
@@ -131,41 +132,42 @@ class MainWindow(QMainWindow):
             }
             QTreeWidget#toolList::item:selected {
                 background-color: #3498db;
-                color: #ffffff;
+                color: #ffffff !important; /* 强制白色，确保清晰 */
                 font-weight: bold;
+            }
+            /* 针对插件（无子项的项目）的选中优化 - 保持与文件夹一致 */
+            QTreeWidget#toolList::item:!has-children:selected {
+                background-color: #3498db; 
+                margin-left: 8px;
             }
             QTreeWidget#toolList::item:selected:hover {
                 background-color: #2980b9;
             }
-            /* 文件夹项目特殊样式 */
-            QTreeWidget#toolList::item[type="folder"] {
+            /* 文件夹项目样式 */
+            QTreeWidget#toolList::item:has-children {
                 font-weight: bold;
                 color: #7f8c8d;
-                text-transform: uppercase;
-                font-size: 11px;
-                margin-top: 10px;
-                padding-left: 5px;
+                margin-top: 6px;
             }
-            /* 指示器样式优化 */
+            /* 文件夹选中时文字也设为白色 */
+            QTreeWidget#toolList::item:has-children:selected {
+                color: #ffffff !important;
+            }
+            
+            /* 指示器样式优化 - 彻底透明化 Branch 区域 */
             QTreeWidget#toolList::branch {
                 background-color: transparent;
+                width: 0px; /* 尽量减小 Branch 区域宽度 */
             }
-            QTreeWidget#toolList::branch:selected {
+            QTreeWidget#toolList::branch:selected,
+            QTreeWidget#toolList::branch:adjoins-item:selected,
+            QTreeWidget#toolList::branch:has-children:selected {
                 background-color: transparent;
             }
-            QTreeWidget#toolList::branch:has-siblings:!adjoins-item {
-                border-image: none;
-            }
-            QTreeWidget#toolList::branch:has-siblings:adjoins-item {
-                border-image: none;
-            }
-            QTreeWidget#toolList::branch:!has-children:!has-siblings:adjoins-item {
-                border-image: none;
-            }
-            QTreeWidget#toolList::branch:open:has-children {
-                image: none; /* 隐藏默认箭头，如果需要可以用自定义图片 */
-            }
-            QTreeWidget#toolList::branch:closed:has-children {
+            
+            /* 隐藏所有默认的展开/折叠箭头，保持扁平化 */
+            QTreeWidget#toolList::branch:has-children:open,
+            QTreeWidget#toolList::branch:has-children:closed {
                 image: none;
             }
         """)
