@@ -96,12 +96,19 @@ class TextCleanerPlugin(BasePlugin):
         """)
         self.demo_btn.clicked.connect(self.load_demo_data)
         
-        self.clear_btn = QPushButton("清空输入框")
+        self.clear_btn = QPushButton("清空输入")
         self.clear_btn.setStyleSheet("""
+            QPushButton { background-color: #e67e22; color: white; border: none; padding: 10px 24px; font-size: 14px; font-weight: bold; border-radius: 4px; }
+            QPushButton:hover { background-color: #d35400; }
+        """)
+        self.clear_btn.clicked.connect(lambda: self.input_text.clear())
+
+        self.clear_result_btn = QPushButton("清空结果")
+        self.clear_result_btn.setStyleSheet("""
             QPushButton { background-color: #e74c3c; color: white; border: none; padding: 10px 24px; font-size: 14px; font-weight: bold; border-radius: 4px; }
             QPushButton:hover { background-color: #c0392b; }
         """)
-        self.clear_btn.clicked.connect(lambda: self.input_text.clear())
+        self.clear_result_btn.clicked.connect(lambda: self.result_text.clear())
 
         self.copy_btn = QPushButton("复制结果")
         self.copy_btn.setStyleSheet("""
@@ -113,6 +120,7 @@ class TextCleanerPlugin(BasePlugin):
         btn_layout.addWidget(self.clean_btn)
         btn_layout.addWidget(self.demo_btn)
         btn_layout.addWidget(self.clear_btn)
+        btn_layout.addWidget(self.clear_result_btn)
         btn_layout.addWidget(self.copy_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
