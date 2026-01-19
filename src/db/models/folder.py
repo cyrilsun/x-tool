@@ -66,3 +66,19 @@ class FolderManager:
             "UPDATE plugin_folders SET sort_order = ? WHERE id = ?",
             (sort_order, folder_id)
         )
+    
+    def clear_all_folders(self):
+        """清空所有文件夹记录"""
+        conn = self.database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM plugin_folders")
+    
+    def insert_folder_with_sort_order(self, name, parent_id, sort_order):
+        """按指定排序值插入文件夹（用于备份恢复等场景）"""
+        conn = self.database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO plugin_folders (name, parent_id, sort_order) VALUES (?, ?, ?)",
+            (name, parent_id, sort_order)
+        )
+        return cursor.lastrowid

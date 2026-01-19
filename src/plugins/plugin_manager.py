@@ -61,13 +61,10 @@ def load_plugins(window):
     # 加载文件夹结构
     try:
         with Database() as db:
-            window.folder_manager._load_folder_structure(db)
+            window.folder_manager.load_folder_structure(db)
             
             # 获取所有插件的文件夹关联和排序顺序
-            cursor = db.get_connection().cursor()
-            plugin_associations = cursor.execute(
-                "SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations"
-            ).fetchall()
+            plugin_associations = db.plugin_association_manager.get_all_plugin_associations()
         
         # 按folder_id和sort_order分组
         plugins_by_folder = {}
@@ -223,17 +220,12 @@ def import_plugin(window):
             
             # 如果是覆盖现有插件，删除所有与该插件相关的关联关系
             with Database() as db:
-                cursor = db.get_connection().cursor()
                 # 查找与该文件名相关的所有插件
-                cursor.execute("SELECT name FROM plugins WHERE file_name = ?", (plugin_name_without_ext,))
-                existing_plugins = cursor.fetchall()
+                existing_plugin_names = db.plugin_manager.get_plugins_by_file_name(plugin_name_without_ext)
                 
                 # 删除这些插件的关联关系，使它们回到根目录
-                for plugin_name in existing_plugins:
-                    cursor.execute(
-                        "DELETE FROM plugin_folder_associations WHERE plugin_name = ?",
-                        (plugin_name[0],)
-                    )
+                for plugin_name in existing_plugin_names:
+                    db.plugin_association_manager.remove_plugin_from_folder(plugin_name)
             
             # 刷新插件
             # 1. 清除现有的插件
@@ -331,15 +323,11 @@ def backup_plugins(window):
             
             # 导出数据库关联数据
             with Database() as db:
-                cursor = db.get_connection().cursor()
-                
                 # 导出插件文件夹
-                cursor.execute("SELECT id, name, parent_id, sort_order FROM plugin_folders ORDER BY parent_id, sort_order")
-                folders = cursor.fetchall()
+                folders = db.folder_manager.get_all_folders()
                 
                 # 导出插件关联
-                cursor.execute("SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations")
-                plugin_associations = cursor.fetchall()
+                plugin_associations = db.plugin_association_manager.get_all_plugin_associations()
             
             # 保存关联数据到JSON文件
             backup_data = {
@@ -435,11 +423,9 @@ def restore_plugins(window):
             
             # 执行数据库操作
             with Database() as db:
-                cursor = db.get_connection().cursor()
-                
                 # 清空现有数据
-                cursor.execute("DELETE FROM plugin_folder_associations")
-                cursor.execute("DELETE FROM plugin_folders")
+                db.plugin_association_manager.clear_all_associations()
+                db.folder_manager.clear_all_folders()
                 
                 # 导入插件文件夹
                 folder_id_mapping = {}
@@ -450,13 +436,10 @@ def restore_plugins(window):
                     new_parent_id = folder_id_mapping.get(parent_id, parent_id)
                     
                     # 插入文件夹
-                    cursor.execute(
-                        "INSERT INTO plugin_folders (name, parent_id, sort_order) VALUES (?, ?, ?)",
-                        (name, new_parent_id, sort_order)
-                    )
+                    new_folder_id = db.folder_manager.insert_folder_with_sort_order(name, new_parent_id, sort_order)
                     
                     # 记录ID映射
-                    folder_id_mapping[old_id] = cursor.lastrowid
+                    folder_id_mapping[old_id] = new_folder_id
                 
                 # 导入插件关联
                 for plugin_assoc_data in backup_data["plugin_associations"]:
@@ -466,10 +449,7 @@ def restore_plugins(window):
                     new_folder_id = folder_id_mapping.get(folder_id, folder_id)
                     
                     # 插入插件关联
-                    cursor.execute(
-                        "INSERT INTO plugin_folder_associations (plugin_name, folder_id, sort_order) VALUES (?, ?, ?)",
-                        (plugin_name, new_folder_id, sort_order)
-                    )
+                    db.plugin_association_manager.insert_association(plugin_name, new_folder_id, sort_order)
             # 数据库操作结束
             
             # 刷新插件

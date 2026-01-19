@@ -199,6 +199,6 @@ class MainWindow(QMainWindow):
                         self.plugin_folder_map[tool_name] = new_folder_id
                 
                 # 更新所有文件夹的排序顺序
-                self.folder_manager._save_folder_sort_order(db)
+                self.folder_manager.save_folder_sort_order(db)
         except Exception as e:
             logger.error(f"保存移动结果失败: {e}")

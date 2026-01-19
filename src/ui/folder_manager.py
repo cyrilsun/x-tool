@@ -36,7 +36,7 @@ class FolderManager:
         folder_item.setExpanded(True)
         return folder_item
 
-    def _create_folder(self, parent_item=None):
+    def create_folder(self, parent_item=None):
         """创建文件夹"""
         # 获取父文件夹ID
         parent_id = None
@@ -72,7 +72,7 @@ class FolderManager:
 
             # 保存排序顺序
             with Database() as db:
-                self._save_folder_sort_order(db)
+                self.save_folder_sort_order(db)
 
         except Exception as e:
             msg_box = QMessageBox(self.main_window)
@@ -83,7 +83,7 @@ class FolderManager:
             msg_box.exec()
             logger.error(f"创建文件夹失败: {e}")
 
-    def _edit_folder_name(self, folder_item):
+    def edit_folder_name(self, folder_item):
         """编辑文件夹名称"""
         current_name = folder_item.text(0)
         new_name, ok = QInputDialog.getText(self.main_window, "编辑文件夹名称", "请输入新的文件夹名称:", text=current_name)
@@ -129,7 +129,7 @@ class FolderManager:
             msg_box.exec()
             logger.error(f"编辑文件夹名称失败: {e}")
 
-    def _delete_folder(self, folder_item):
+    def delete_folder(self, folder_item):
         """删除文件夹"""
         # 检查文件夹是否为空
         if folder_item.childCount() > 0:
@@ -207,7 +207,7 @@ class FolderManager:
                 return True
         return False
 
-    def _save_folder_sort_order(self, db):
+    def save_folder_sort_order(self, db):
         """保存文件夹排序顺序、顶层插件排序顺序和首页排序位置"""
         # 保存顶层项目排序（包括文件夹、顶层插件和首页）
         for i in range(self.main_window.tool_list_widget.topLevelItemCount()):
@@ -242,7 +242,7 @@ class FolderManager:
                         # 更新文件夹内插件的排序顺序
                         db.plugin_association_manager.update_plugin_sort_order(plugin_name, j)
 
-    def _load_folder_structure(self, db):
+    def load_folder_structure(self, db):
         """加载文件夹结构"""
         # 获取所有文件夹
         folders = db.folder_manager.get_all_folders()

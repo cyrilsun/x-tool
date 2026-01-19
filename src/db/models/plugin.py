@@ -120,3 +120,20 @@ class PluginManager:
         )
         result = cursor.fetchone()
         return result[0] if result else None
+    
+    def get_plugins_by_file_name(self, file_name):
+        """根据插件文件名获取所有匹配的插件名称列表
+        
+        Args:
+            file_name: 插件文件名（不包含扩展名）
+        
+        Returns:
+            插件名称列表
+        """
+        conn = self.database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT name FROM plugins WHERE file_name = ?",
+            (file_name,)
+        )
+        return [row[0] for row in cursor.fetchall()]

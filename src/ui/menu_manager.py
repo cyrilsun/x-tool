@@ -26,7 +26,7 @@ class MenuManager:
 
         # 创建并保存新建文件夹菜单项引用
         self.new_folder_action = QAction("文件夹", self.main_window)
-        self.new_folder_action.triggered.connect(lambda: self.main_window.folder_manager._create_folder())
+        self.new_folder_action.triggered.connect(lambda: self.main_window.folder_manager.create_folder())
         self.new_menu.addAction(self.new_folder_action)
 
         # 添加分隔线
@@ -118,7 +118,7 @@ class MenuManager:
 
         # 创建文件夹
         create_folder_action = menu.addAction("创建文件夹")
-        create_folder_action.triggered.connect(lambda: self.main_window.folder_manager._create_folder())
+        create_folder_action.triggered.connect(lambda: self.main_window.folder_manager.create_folder())
 
         menu.exec(self.main_window.tool_list_widget.mapToGlobal(position))
 
@@ -128,15 +128,15 @@ class MenuManager:
 
         # 创建文件夹
         create_folder_action = menu.addAction("创建文件夹")
-        create_folder_action.triggered.connect(lambda: self.main_window.folder_manager._create_folder(folder_item))
+        create_folder_action.triggered.connect(lambda: self.main_window.folder_manager.create_folder(folder_item))
 
         # 编辑名称
         edit_folder_action = menu.addAction("编辑名称")
-        edit_folder_action.triggered.connect(lambda: self.main_window.folder_manager._edit_folder_name(folder_item))
+        edit_folder_action.triggered.connect(lambda: self.main_window.folder_manager.edit_folder_name(folder_item))
 
         # 删除文件夹
         delete_folder_action = menu.addAction("删除文件夹")
-        delete_folder_action.triggered.connect(lambda: self.main_window.folder_manager._delete_folder(folder_item))
+        delete_folder_action.triggered.connect(lambda: self.main_window.folder_manager.delete_folder(folder_item))
 
         menu.addSeparator()
 

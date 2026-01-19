@@ -66,3 +66,27 @@ class PluginAssociationManager:
             (folder_id,)
         )
         return [(row[0], row[1]) for row in cursor.fetchall()]
+    
+    def get_all_plugin_associations(self):
+        """获取所有插件与文件夹的关联关系"""
+        conn = self.database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations"
+        )
+        return [(row[0], row[1], row[2]) for row in cursor.fetchall()]
+    
+    def clear_all_associations(self):
+        """清空所有插件与文件夹关联"""
+        conn = self.database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM plugin_folder_associations")
+    
+    def insert_association(self, plugin_name, folder_id, sort_order):
+        """插入插件与文件夹关联（用于备份恢复等场景）"""
+        conn = self.database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO plugin_folder_associations (plugin_name, folder_id, sort_order) VALUES (?, ?, ?)",
+            (plugin_name, folder_id, sort_order)
+        )
