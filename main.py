@@ -1,8 +1,6 @@
 import sys
-import os
 
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QIcon
 
 from src.config.app_config import VERSION
 from src.plugins.plugin_manager import load_plugins

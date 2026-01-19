@@ -1,4 +1,3 @@
-import sys
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
@@ -156,9 +155,4 @@ class MenuManager:
         delete_plugin_action.triggered.connect(lambda: self.main_window.tool_manager.delete_plugin(tool_item))
 
         menu.exec(self.main_window.tool_list_widget.mapToGlobal(position))
-    
-    def _open_plugin_market(self):
-        """打开插件市场窗口"""
-        from src.plugins.plugin_market_window import PluginMarketWindow
-        self.plugin_market_window = PluginMarketWindow(self.main_window)
-        self.plugin_market_window.show()
+
