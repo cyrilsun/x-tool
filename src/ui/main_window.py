@@ -113,6 +113,8 @@ class MainWindow(QMainWindow):
                 border-right: 1px solid #dcdde1;
                 outline: none;
                 padding-top: 10px;
+                selection-background-color: transparent;
+                show-decoration-selected: 0;
             }
             QTreeWidget#toolList::item {
                 padding: 10px 15px;
@@ -146,6 +148,9 @@ class MainWindow(QMainWindow):
             }
             /* 指示器样式优化 */
             QTreeWidget#toolList::branch {
+                background-color: transparent;
+            }
+            QTreeWidget#toolList::branch:selected {
                 background-color: transparent;
             }
             QTreeWidget#toolList::branch:has-siblings:!adjoins-item {
