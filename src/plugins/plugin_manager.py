@@ -25,25 +25,54 @@ def load_plugins(window):
             
             plugin.setStyleSheet("""
                 QWidget {
-                    font-size: 16px;
+                    background-color: transparent;
+                    color: #2f3640;
+                    font-family: "Segoe UI", "Microsoft YaHei";
+                    font-size: 14px;
                 }
                 QGroupBox {
-                    font-size: 18px;
+                    font-size: 16px;
                     font-weight: bold;
+                    color: #2c3e50;
+                    border: 1px solid #dcdde1;
+                    border-radius: 8px;
+                    margin-top: 15px;
+                    padding-top: 15px;
+                }
+                QGroupBox::title {
+                    subcontrol-origin: margin;
+                    left: 15px;
+                    padding: 0 5px;
                 }
                 QLabel {
-                    font-size: 16px;
+                    color: #636e72;
                 }
-                QComboBox {
-                    font-size: 16px;
-                    padding: 8px;
+                QLineEdit, QComboBox, QSpinBox, QTextEdit {
+                    border: 1px solid #dcdde1;
+                    border-radius: 4px;
+                    padding: 6px 10px;
+                    background-color: #ffffff;
                 }
-                QTextEdit {
-                    font-size: 16px;
+                QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QTextEdit:focus {
+                    border: 1px solid #3498db;
                 }
                 QPushButton {
-                    font-size: 16px;
+                    background-color: #3498db;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
                     font-weight: bold;
+                    border-radius: 4px;
+                }
+                QPushButton:hover {
+                    background-color: #2980b9;
+                }
+                QPushButton:pressed {
+                    background-color: #1e3799;
+                }
+                QScrollArea {
+                    border: none;
+                    background-color: transparent;
                 }
             """)
 

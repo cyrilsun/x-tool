@@ -251,51 +251,13 @@ class ExcelSplitPlugin(BasePlugin):
         
         # 源文件选择
         source_group = QGroupBox("选择源文件")
-        source_group.setStyleSheet("""
-            QGroupBox {
-                font-size: 16px;
-                font-weight: bold;
-                color: #2c3e50;
-                border: 2px solid #bdc3c7;
-                border-radius: 8px;
-                margin-top: 10px;
-                padding-top: 15px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-        """)
-        
         source_layout = QVBoxLayout()
         
         self.source_edit = QLineEdit()
         self.source_edit.setPlaceholderText("请选择要拆分的Excel文件")
-        self.source_edit.setStyleSheet("""
-            QLineEdit {
-                padding: 8px;
-                font-size: 14px;
-                border: 1px solid #bdc3c7;
-                border-radius: 4px;
-            }
-        """)
         source_layout.addWidget(self.source_edit)
         
         self.select_source_btn = QPushButton("选择Excel文件")
-        self.select_source_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                font-size: 14px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-        """)
         self.select_source_btn.clicked.connect(self.select_source_file)
         source_layout.addWidget(self.select_source_btn)
         
@@ -304,51 +266,14 @@ class ExcelSplitPlugin(BasePlugin):
         
         # 输出目录选择
         output_group = QGroupBox("选择输出目录")
-        output_group.setStyleSheet("""
-            QGroupBox {
-                font-size: 16px;
-                font-weight: bold;
-                color: #2c3e50;
-                border: 2px solid #bdc3c7;
-                border-radius: 8px;
-                margin-top: 10px;
-                padding-top: 15px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-        """)
-        
         output_layout = QVBoxLayout()
         
         self.output_edit = QLineEdit()
         self.output_edit.setPlaceholderText("请选择输出目录")
-        self.output_edit.setStyleSheet("""
-            QLineEdit {
-                padding: 8px;
-                font-size: 14px;
-                border: 1px solid #bdc3c7;
-                border-radius: 4px;
-            }
-        """)
         output_layout.addWidget(self.output_edit)
         
         self.select_output_btn = QPushButton("选择输出目录")
-        self.select_output_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #9b59b6;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                font-size: 14px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #8e44ad;
-            }
-        """)
+        self.select_output_btn.setStyleSheet("background-color: #9b59b6;") # 稍微区分下颜色
         self.select_output_btn.clicked.connect(self.select_output_dir)
         output_layout.addWidget(self.select_output_btn)
         
@@ -357,41 +282,15 @@ class ExcelSplitPlugin(BasePlugin):
         
         # 拆分选项
         option_group = QGroupBox("拆分选项")
-        option_group.setStyleSheet("""
-            QGroupBox {
-                font-size: 16px;
-                font-weight: bold;
-                color: #2c3e50;
-                border: 2px solid #bdc3c7;
-                border-radius: 8px;
-                margin-top: 10px;
-                padding-top: 15px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-        """)
-        
         option_layout = QVBoxLayout()
         
         # 拆分方式
         method_layout = QHBoxLayout()
         method_label = QLabel("拆分方式:")
-        method_label.setStyleSheet("font-size: 14px;")
         self.method_combo = QComboBox()
         self.method_combo.addItem("按行数拆分", "rows")
         self.method_combo.addItem("按列数拆分", "columns")
         self.method_combo.addItem("按字段值拆分", "field")
-        self.method_combo.setStyleSheet("""
-            QComboBox {
-                padding: 8px;
-                font-size: 14px;
-                border: 1px solid #bdc3c7;
-                border-radius: 4px;
-            }
-        """)
         self.method_combo.setMinimumWidth(180)
         self.method_combo.currentIndexChanged.connect(self.on_split_method_changed)
         method_layout.addWidget(method_label)
@@ -401,31 +300,11 @@ class ExcelSplitPlugin(BasePlugin):
         
         # 行数拆分选项
         self.rows_group = QGroupBox("按行数拆分")
-        self.rows_group.setStyleSheet("""
-            QGroupBox {
-                font-size: 14px;
-                font-weight: normal;
-                color: #34495e;
-                border: 1px solid #bdc3c7;
-                border-radius: 6px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-                font-weight: bold;
-            }
-        """)
-        
         rows_layout = QHBoxLayout()
         rows_label = QLabel("每个文件行数:")
-        rows_label.setStyleSheet("font-size: 13px;")
         self.rows_spin = QSpinBox()
         self.rows_spin.setRange(1, 100000)
         self.rows_spin.setValue(1000)
-        self.rows_spin.setStyleSheet("font-size: 13px;")
         rows_layout.addWidget(rows_label)
         rows_layout.addWidget(self.rows_spin)
         rows_layout.addStretch()
@@ -434,31 +313,11 @@ class ExcelSplitPlugin(BasePlugin):
         
         # 列数拆分选项
         self.columns_group = QGroupBox("按列数拆分")
-        self.columns_group.setStyleSheet("""
-            QGroupBox {
-                font-size: 14px;
-                font-weight: normal;
-                color: #34495e;
-                border: 1px solid #bdc3c7;
-                border-radius: 6px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-                font-weight: bold;
-            }
-        """)
-        
         columns_layout = QHBoxLayout()
         columns_label = QLabel("每个文件列数:")
-        columns_label.setStyleSheet("font-size: 13px;")
         self.columns_spin = QSpinBox()
         self.columns_spin.setRange(1, 1000)
         self.columns_spin.setValue(10)
-        self.columns_spin.setStyleSheet("font-size: 13px;")
         columns_layout.addWidget(columns_label)
         columns_layout.addWidget(self.columns_spin)
         columns_layout.addStretch()
@@ -468,36 +327,9 @@ class ExcelSplitPlugin(BasePlugin):
         
         # 字段值拆分选项
         self.field_group = QGroupBox("按字段值拆分")
-        self.field_group.setStyleSheet("""
-            QGroupBox {
-                font-size: 14px;
-                font-weight: normal;
-                color: #34495e;
-                border: 1px solid #bdc3c7;
-                border-radius: 6px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-                font-weight: bold;
-            }
-        """)
-        
         field_layout = QHBoxLayout()
         field_label = QLabel("拆分字段:")
-        field_label.setStyleSheet("font-size: 13px;")
         self.field_combo = QComboBox()
-        self.field_combo.setStyleSheet("""
-            QComboBox {
-                padding: 8px;
-                font-size: 14px;
-                border: 1px solid #bdc3c7;
-                border-radius: 4px;
-            }
-        """)
         self.field_combo.setMinimumWidth(180)
         field_layout.addWidget(field_label)
         field_layout.addWidget(self.field_combo)
@@ -510,7 +342,6 @@ class ExcelSplitPlugin(BasePlugin):
         header_layout = QHBoxLayout()
         self.preserve_header_check = QCheckBox("保留表头")
         self.preserve_header_check.setChecked(True)
-        self.preserve_header_check.setStyleSheet("font-size: 13px;")
         header_layout.addWidget(self.preserve_header_check)
         header_layout.addStretch()
         option_layout.addLayout(header_layout)
@@ -551,19 +382,6 @@ class ExcelSplitPlugin(BasePlugin):
         description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
         
         self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f8f9fa;
-                color: #343a40;
-                border: 1px solid #dee2e6;
-                padding: 4px 8px;
-                font-size: 12px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #e9ecef;
-            }
-        """)
         self.toggle_description_btn.clicked.connect(self.toggle_description)
         
         description_header_layout.addWidget(description_title)
@@ -573,7 +391,6 @@ class ExcelSplitPlugin(BasePlugin):
         # 创建说明内容区域
         self.description_text = QTextEdit()
         self.description_text.setReadOnly(True)
-        self.description_text.setStyleSheet("font-size: 13px; padding: 10px;")
         self.description_text.setHtml("""
             <h3>Excel拆分插件功能介绍</h3>
             <ul>

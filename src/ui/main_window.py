@@ -25,33 +25,65 @@ class MainWindow(QMainWindow):
         # 设置应用样式
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #f0f0f0;
+                background-color: #f5f6fa;
             }
             QMainWindow::separator {
-                background-color: #d0d0d0;
+                background-color: #dcdde1;
+                width: 1px;
             }
             QMenuBar {
-                background-color: #f5f5f5;
-                border-bottom: 1px solid #d0d0d0;
-                padding: 4px;
+                background-color: #ffffff;
+                border-bottom: 1px solid #dcdde1;
+                padding: 5px 10px;
+                font-family: "Segoe UI", "Microsoft YaHei";
                 font-size: 14px;
+                color: #2f3640;
+            }
+            QMenuBar::item {
+                background: transparent;
+                padding: 4px 10px;
+                margin-right: 5px;
+                border-radius: 4px;
             }
             QMenuBar::item:selected {
-                background-color: #e0e0e0;
+                background-color: #f1f2f6;
+                color: #3498db;
             }
             QMenu {
                 background-color: #ffffff;
-                border: 1px solid #d0d0d0;
+                border: 1px solid #dcdde1;
+                padding: 5px;
+                border-radius: 6px;
+            }
+            QMenu::item {
+                padding: 8px 25px 8px 20px;
+                border-radius: 4px;
+                margin: 2px;
+                font-size: 13px;
+                color: #2f3640;
             }
             QMenu::item:selected {
-                background-color: #4a90e2;
-                color: white;
+                background-color: #3498db;
+                color: #ffffff;
+            }
+            QMenu::separator {
+                height: 1px;
+                background: #f1f2f6;
+                margin: 5px 10px;
             }
             QSplitter::handle {
-                background-color: #d0d0d0;
+                background-color: #dcdde1;
             }
             QSplitter::handle:horizontal {
                 width: 1px;
+            }
+            QMessageBox {
+                background-color: #ffffff;
+            }
+            QPushButton {
+                padding: 8px 15px;
+                border-radius: 4px;
+                font-size: 13px;
             }
         """)
 
@@ -78,49 +110,58 @@ class MainWindow(QMainWindow):
             QTreeWidget#toolList {
                 background-color: #ffffff;
                 border: none;
-                border-right: 1px solid #d0d0d0;
+                border-right: 1px solid #dcdde1;
                 outline: none;
+                padding-top: 10px;
             }
             QTreeWidget#toolList::item {
-                padding: 8px 15px;
-                border-bottom: 1px solid #eee;
-                font-size: 14px;
-            }
-            QTreeWidget#toolList::item:selected {
-                background-color: #4a90e2;
-                color: white;
+                padding: 10px 15px;
+                margin: 2px 8px;
+                border-radius: 6px;
+                color: #2f3640;
+                font-family: "Segoe UI", "Microsoft YaHei";
+                font-size: 13px;
+                border: none;
             }
             QTreeWidget#toolList::item:hover {
-                background-color: #e6f0fa;
+                background-color: #f1f2f6;
+                color: #3498db;
+            }
+            QTreeWidget#toolList::item:selected {
+                background-color: #3498db;
+                color: #ffffff;
+                font-weight: bold;
             }
             QTreeWidget#toolList::item:selected:hover {
-                background-color: #3a7bc8;
+                background-color: #2980b9;
             }
-            QTreeWidget#toolList QTreeWidgetItem {
-                margin-bottom: 2px;
+            /* 文件夹项目特殊样式 */
+            QTreeWidget#toolList::item[type="folder"] {
+                font-weight: bold;
+                color: #7f8c8d;
+                text-transform: uppercase;
+                font-size: 11px;
+                margin-top: 10px;
+                padding-left: 5px;
             }
-            /* 优化文件夹展开/折叠指示器样式 */
+            /* 指示器样式优化 */
             QTreeWidget#toolList::branch {
-                background-color: white;
+                background-color: transparent;
             }
             QTreeWidget#toolList::branch:has-siblings:!adjoins-item {
                 border-image: none;
-                background-color: white;
             }
             QTreeWidget#toolList::branch:has-siblings:adjoins-item {
                 border-image: none;
-                background-color: white;
             }
             QTreeWidget#toolList::branch:!has-children:!has-siblings:adjoins-item {
                 border-image: none;
-                background-color: white;
             }
-            /* 展开指示器颜色 */
-            QTreeWidget#toolList::branch:open {
-                background-color: white;
+            QTreeWidget#toolList::branch:open:has-children {
+                image: none; /* 隐藏默认箭头，如果需要可以用自定义图片 */
             }
-            QTreeWidget#toolList::branch:closed {
-                background-color: white;
+            QTreeWidget#toolList::branch:closed:has-children {
+                image: none;
             }
         """)
         
@@ -136,7 +177,8 @@ class MainWindow(QMainWindow):
         self.tool_stack_widget = QStackedWidget()
         self.tool_stack_widget.setStyleSheet("""
             QStackedWidget {
-                background-color: #fafafa;
+                background-color: #f5f6fa;
+                border: none;
             }
         """)
         self.splitter.addWidget(self.tool_stack_widget)
