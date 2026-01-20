@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import requests
 from src.utils.logger import logger
 import threading
 from typing import List, Dict, Any, Optional
@@ -77,8 +78,12 @@ class SpeechDraftPlugin(BasePlugin):
                     self.sum_user_input.setPlainText(sum_p.get("user", "请根据文章标题“{title}”，撰写一段简短的内容概述，描述讲话的场景、听众和核心要点。字数在100字左右。"))
                     
                     gen_p = prompts.get("generation", {})
-                    self.gen_sys_input.setPlainText(gen_p.get("system", "你是一个专业的讲话稿写作专家。请根据用户提供的标题、关键词和内容概述，撰写一份高质量、得体、富有感染力的讲话稿。"))
-                    self.gen_user_input.setPlainText(gen_p.get("user", "标题：{title}\n关键词：{keywords}\n内容概述：{content}\n参考文件：{files}\n\n请开始撰写讲话稿全文："))
+                    self.gen_sys_input.setPlainText(gen_p.get("system", "你是一个专业的讲话稿写作专家。请根据用户提供的标题、关键词和内容概述，参考提供的联网搜索结果和参考文档，撰写一份高质量、得体、富有感染力的讲话稿。"))
+                    self.gen_user_input.setPlainText(gen_p.get("user", "标题：{title}\n关键词：{keywords}\n内容概述：{content}\n联网搜索参考：\n{search_results}\n参考文件：{files}\n\n请开始撰写讲话稿全文："))
+                    
+                    # 联网搜索配置
+                    self.search_url_input.setText(config.get("search_url", "https://ark.cn-beijing.volces.com/api/v3/bots/batch_chats")) # 火山搜索默认地址
+                    self.search_key_input.setText(config.get("search_key", ""))
             except Exception as e:
                 logger.error(f"加载 AI 配置失败: {e}")
 
@@ -90,6 +95,8 @@ class SpeechDraftPlugin(BasePlugin):
             "model": self.model_input.text().strip(),
             "temperature": self.temp_input.text().strip(),
             "max_tokens": self.max_tokens_input.text().strip(),
+            "search_url": self.search_url_input.text().strip(),
+            "search_key": self.search_key_input.text().strip(),
             "prompts": {
                 "keywords": {
                     "system": self.kw_sys_input.toPlainText(),
@@ -385,6 +392,28 @@ class SpeechDraftPlugin(BasePlugin):
         prompt_tab.setWidget(prompt_container)
         
         self.config_tabs.addTab(model_tab, "模型设置")
+        
+        # --- Tab 2: 联网搜索配置 ---
+        search_tab = QWidget()
+        search_layout = QVBoxLayout(search_tab)
+        
+        self.search_url_input = QLineEdit()
+        self.search_url_input.setPlaceholderText("API URL")
+        self.search_url_input.textChanged.connect(self._save_config)
+        search_layout.addWidget(QLabel("Search API URL:"))
+        search_layout.addWidget(self.search_url_input)
+        
+        self.search_key_input = QLineEdit()
+        self.search_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.search_key_input.setPlaceholderText("API Key")
+        self.search_key_input.textChanged.connect(self._save_config)
+        search_layout.addWidget(QLabel("Search API Key:"))
+        search_layout.addWidget(self.search_key_input)
+        search_layout.addStretch()
+        
+        self.config_tabs.addTab(search_tab, "联网搜索")
+        
+        # --- Tab 3: 提示词配置 ---
         self.config_tabs.addTab(prompt_tab, "提示词配置")
         
         settings_main_layout.addWidget(self.config_tabs)
@@ -517,8 +546,14 @@ class SpeechDraftPlugin(BasePlugin):
             QMessageBox.warning(self, "提醒", "请先输入文章标题")
             return
         
+        keywords = self.kw_input.text().strip()
         sys_p = self.sum_sys_input.toPlainText().strip()
-        user_p = self.sum_user_input.toPlainText().strip().format(title=title)
+        # 传入 title 和 keywords，同时兼容 keyword 拼写
+        user_p = self.sum_user_input.toPlainText().strip().format(
+            title=title, 
+            keywords=keywords or "无",
+            keyword=keywords or "无"
+        )
         self._call_ai_oneshot(sys_p, user_p, self.content_input)
 
     def _on_oneshot_finished(self, content, target_widget):
@@ -587,30 +622,112 @@ class SpeechDraftPlugin(BasePlugin):
         self.generate_btn.setText("正在生成...")
         self.output_area.clear()
 
-        # 准备提示词
+        # 启动处理线程
+        threading.Thread(target=self._generation_workflow, args=(title,), daemon=True).start()
+
+    def _generation_workflow(self, title):
+        """完整的生成工作流：提取意图 -> 联网搜索 -> 生成正文"""
         keywords = self.kw_input.text().strip()
         content_summary = self.content_input.toPlainText().strip()
+        search_results_str = "未开启联网搜索"
+        
+        # 1. 如果开启了联网搜索
+        if self.search_check.isChecked():
+            self.one_shot_signals.chunk_received.emit("> 正在提炼搜索意图并联网检索...\n")
+            search_results_str = self._perform_online_search(title, keywords, content_summary)
+            self.one_shot_signals.chunk_received.emit("> 联网搜索完成，正在组织语言撰写全文...\n\n")
+
+        # 2. 准备最终提示词
         files_str = f"已上传 {len(self.reference_files)} 个相关文档" if self.reference_files else "无"
         
         system_prompt = self.gen_sys_input.toPlainText().strip()
         if self.search_check.isChecked():
-            system_prompt += " 请结合最新的行业动态和联网搜索的信息（模拟）。"
+            system_prompt += " 请重点参考提供的联网搜索实时信息。"
 
         user_prompt_template = self.gen_user_input.toPlainText().strip()
         user_prompt = user_prompt_template.format(
             title=title,
             keywords=keywords or "无",
             content=content_summary or "无",
+            search_results=search_results_str,
             files=files_str
         )
 
-        # 创建并启动流式处理线程
+        # 3. 启动流式生成
         self.signals = StreamWorkerSignals()
         self.signals.chunk_received.connect(self._on_chunk_received)
         self.signals.finished.connect(self._on_finished)
         self.signals.error.connect(self._on_error)
         
-        threading.Thread(target=self._stream_task, args=(system_prompt, user_prompt), daemon=True).start()
+        self._stream_task(system_prompt, user_prompt)
+
+    def _perform_online_search(self, title, keywords, summary) -> str:
+        """执行联网搜索逻辑"""
+        search_url = self.search_url_input.text().strip()
+        search_key = self.search_key_input.text().strip()
+        
+        if not search_url or not search_key:
+            return "联网搜索失败：未配置搜索 API URL 或 Key"
+
+        try:
+            # A. 提炼搜索意图
+            client = OpenAI(api_key=self.api_key_input.text().strip(), base_url=self.api_base_input.text().strip())
+            intent_prompt = f"请根据讲话稿标题《{title}》、关键词({keywords})和内容概述({summary})，提炼3个用于联网搜索的精准查询词，以换行分隔。仅返回查询词。"
+            
+            resp = client.chat.completions.create(
+                model=self.model_input.text().strip(),
+                messages=[{"role": "user", "content": intent_prompt}],
+                temperature=0.3,
+                stream=False
+            )
+            intents = [line.strip() for line in resp.choices[0].message.content.split('\n') if line.strip()][:3]
+            logger.info(f"提炼出的搜索意图: {intents}")
+
+            # B. 并行/串行执行搜索
+            all_formatted_results = []
+            for intent in intents:
+                res = self._call_volcano_search(intent, search_url, search_key, count=5)
+                if res:
+                    all_formatted_results.append(f"--- 关于“{intent}”的搜索结果 ---\n{res}")
+            
+            return "\n\n".join(all_formatted_results) if all_formatted_results else "联网搜索未找到相关结果。"
+            
+        except Exception as e:
+            logger.error(f"联网搜索流程异常: {e}")
+            return f"联网搜索发生异常: {str(e)}"
+
+    def _call_volcano_search(self, query, url, api_key, count=5) -> str:
+        """调用火山搜索接口 (同步)"""
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "Query": query,
+            "SearchType": "web",
+            "NeedSummary": True,
+            "Count": count
+        }
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            if response.status_code == 200:
+                json_res = response.json()
+                # 处理火山特定的错误元数据
+                if "ResponseMetadata" in json_res and "Error" in json_res["ResponseMetadata"]:
+                    err = json_res["ResponseMetadata"]["Error"]
+                    if err: return f"API 报错: {err}"
+
+                results = json_res.get("Result", {}).get("WebResults", [])
+                if not results: return ""
+
+                formatted = ""
+                for idx, r in enumerate(results, start=1):
+                    formatted += f"[{idx}] {r.get('Title')}\n摘要: {r.get('Summary')}\n来源: {r.get('SiteName')} ({r.get('PublishTime')})\n\n"
+                return formatted.strip()
+            else:
+                return f"HTTP {response.status_code}"
+        except Exception as e:
+            return f"请求异常: {str(e)}"
 
     def _stream_task(self, system_prompt, user_prompt):
         api_key = self.api_key_input.text().strip()
