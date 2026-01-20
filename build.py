@@ -43,13 +43,36 @@ def clean_build_files():
     print("清理完成!")
 
 def build_macos(args):
-    """构建macOS版本"""
+    """构建macOS版本（优化版）"""
     print("正在构建macOS版本...")
     
     # 获取PyQt6翻译文件路径
     import PyQt6
     pyqt_path = os.path.dirname(PyQt6.__file__)
     translations_src = os.path.join(pyqt_path, 'Qt6', 'translations')
+    
+    # 排除不需要的模块（减小体积）
+    exclude_modules = [
+        'tkinter',           # Tk GUI 框架
+        'test',              # Python 测试模块
+        'unittest',          # 单元测试
+        'email',             # 邮件处理
+        'http.server',       # HTTP 服务器
+        # 'urllib',          # ⚠️ 不能排除！被 zipfile、pathlib 等核心模块依赖
+        'pydoc',             # 文档生成
+        'distutils',         # 打包工具
+        'setuptools',        # 安装工具
+        'pip',               # 包管理器
+        'PyQt6.QtWebEngineWidgets',  # Web引擎（如不用广告）
+        'PyQt6.QtWebEngineCore',
+        'PyQt6.QtBluetooth',
+        'PyQt6.QtNfc',
+        'PyQt6.QtPositioning',
+        'PyQt6.QtSensors',
+        'PyQt6.QtSerialPort',
+        'PyQt6.QtMultimedia',
+        'PyQt6.QtMultimediaWidgets',
+    ]
     
     cmd = [
         "pyinstaller",
@@ -59,16 +82,29 @@ def build_macos(args):
         "--add-data=resources:resources",
         f"--add-data={translations_src}:translations",
         "--collect-data=src.plugins",
-        "--hidden-import=pymysql",
         "--hidden-import=PyQt6",
         "--hidden-import=pandas",
         "--hidden-import=openpyxl",
+        "--hidden-import=configparser",
         "--icon=icon.icns",
-        "main.py"
     ]
+    
+    # 添加排除模块
+    for module in exclude_modules:
+        cmd.append(f"--exclude-module={module}")
+    
+    # 启用 UPX 压缩（如果已安装）
+    upx_path = "/usr/local/bin/upx"  # macOS Homebrew 默认路径
+    if os.path.exists(upx_path) or shutil.which("upx"):
+        cmd.append("--upx-dir=/usr/local/bin")
+        print("✅ 已启用 UPX 压缩")
+    else:
+        print("⚠️  未检测到 UPX，跳过压缩（提示：运行 'brew install upx' 安装）")
     
     if args.onefile:
         cmd.append("--onefile")
+    
+    cmd.append("main.py")
     
     try:
         subprocess.run(cmd, check=True)
@@ -80,13 +116,24 @@ def build_macos(args):
     return True
 
 def build_windows(args):
-    """构建Windows版本"""
-    print("正在构建Windows版本...")
+    """构庺Windows版本（优化版）"""
+    print("正在构庺Windows版本...")
     
     # 获取PyQt6翻译文件路径
     import PyQt6
     pyqt_path = os.path.dirname(PyQt6.__file__)
     translations_src = os.path.join(pyqt_path, 'Qt6', 'translations')
+    
+    # 排除不需要的模块
+    exclude_modules = [
+        'tkinter', 'test', 'unittest', 'email', 'http.server',
+        # 'urllib',  # ⚠️ 不能排除！被 zipfile、pathlib 等核心模块依赖
+        'pydoc', 'distutils', 'setuptools', 'pip',
+        'PyQt6.QtWebEngineWidgets', 'PyQt6.QtWebEngineCore',
+        'PyQt6.QtBluetooth', 'PyQt6.QtNfc', 'PyQt6.QtPositioning',
+        'PyQt6.QtSensors', 'PyQt6.QtSerialPort',
+        'PyQt6.QtMultimedia', 'PyQt6.QtMultimediaWidgets',
+    ]
     
     cmd = [
         "pyinstaller",
@@ -95,15 +142,24 @@ def build_windows(args):
         "--add-data=resources;resources",
         f"--add-data={translations_src};translations",
         "--collect-data=src.plugins",
-        "--hidden-import=pymysql",
         "--hidden-import=PyQt6",
         "--hidden-import=pandas",
         "--hidden-import=openpyxl",
-        "main.py"
+        "--hidden-import=configparser",
     ]
+    
+    for module in exclude_modules:
+        cmd.append(f"--exclude-module={module}")
+    
+    # Windows UPX 检测
+    if shutil.which("upx"):
+        cmd.append("--upx-dir=upx")
+        print("✅ 已启用 UPX 压缩")
     
     if args.onefile:
         cmd.append("--onefile")
+    
+    cmd.append("main.py")
     
     try:
         subprocess.run(cmd, check=True)
@@ -115,13 +171,24 @@ def build_windows(args):
     return True
 
 def build_linux(args):
-    """构建Linux版本"""
+    """构建Linux版本（优化版）"""
     print("正在构建Linux版本...")
     
     # 获取PyQt6翻译文件路径
     import PyQt6
     pyqt_path = os.path.dirname(PyQt6.__file__)
     translations_src = os.path.join(pyqt_path, 'Qt6', 'translations')
+    
+    # 排除不需要的模块
+    exclude_modules = [
+        'tkinter', 'test', 'unittest', 'email', 'http.server',
+        # 'urllib',  # ⚠️ 不能排除！被 zipfile、pathlib 等核心模块依赖
+        'pydoc', 'distutils', 'setuptools', 'pip',
+        'PyQt6.QtWebEngineWidgets', 'PyQt6.QtWebEngineCore',
+        'PyQt6.QtBluetooth', 'PyQt6.QtNfc', 'PyQt6.QtPositioning',
+        'PyQt6.QtSensors', 'PyQt6.QtSerialPort',
+        'PyQt6.QtMultimedia', 'PyQt6.QtMultimediaWidgets',
+    ]
     
     cmd = [
         "pyinstaller",
@@ -130,15 +197,24 @@ def build_linux(args):
         "--add-data=resources:resources",
         f"--add-data={translations_src}:translations",
         "--collect-data=src.plugins",
-        "--hidden-import=pymysql",
         "--hidden-import=PyQt6",
         "--hidden-import=pandas",
         "--hidden-import=openpyxl",
-        "main.py"
+        "--hidden-import=configparser",
     ]
+    
+    for module in exclude_modules:
+        cmd.append(f"--exclude-module={module}")
+    
+    # Linux UPX 检测
+    if shutil.which("upx"):
+        cmd.append("--upx-dir=/usr/bin")
+        print("✅ 已启用 UPX 压缩")
     
     if args.onefile:
         cmd.append("--onefile")
+    
+    cmd.append("main.py")
     
     try:
         subprocess.run(cmd, check=True)
@@ -158,9 +234,11 @@ def main():
         clean_build_files()
         return
     
-    # 确保资源目录存在
-    if not os.path.exists("resources"):
-        os.makedirs("resources")
+    # 确保必要目录存在
+    for d in ["resources", "plugins", "lib"]:
+        if not os.path.exists(d):
+            os.makedirs(d)
+            print(f"创建目录: {d}")
     
     # 根据平台构建
     success = True
@@ -178,6 +256,37 @@ def main():
             success = False
     
     if success:
+        # 后置处理：拷贝外部文件夹到 dist 目录
+        print("\n正在执行后置处理（拷贝外部文件夹）...")
+        dist_dir = "dist"
+        folders_to_copy = ["plugins", "lib"]
+        
+        for folder in folders_to_copy:
+            src_path = folder
+            # macOS .app 模式，文件夹应放在 .app 旁边
+            # Windows/Linux 模式，文件夹应放在生成的程序文件夹内
+            target_dirs = []
+            if sys.platform == 'darwin':
+                target_dirs.append(dist_dir)
+            else:
+                target_dirs.append(os.path.join(dist_dir, "X-Tool"))
+            
+            for t_dir in target_dirs:
+                if os.path.exists(t_dir):
+                    dest_path = os.path.join(t_dir, folder)
+                    # 无论源目录是否有内容，都确保目标目录存在
+                    if not os.path.exists(dest_path):
+                        os.makedirs(dest_path)
+                    
+                    if os.path.exists(src_path) and os.listdir(src_path):
+                        # 如果源目录有内容，则拷贝
+                        if os.path.exists(dest_path):
+                            shutil.rmtree(dest_path)
+                        shutil.copytree(src_path, dest_path)
+                        print(f"✅ 已同步内容到: {dest_path}")
+                    else:
+                        print(f"✅ 已创建空目录: {dest_path}")
+
         print("\n所有构建任务完成!")
     else:
         print("\n构建过程中出现错误!")

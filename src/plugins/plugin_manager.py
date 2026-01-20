@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 from src.db.database import Database
 from src.plugins.plugin_loader import PluginLoader, get_plugin_directory
+from src.utils.path_utils import get_lib_directory
 from src.utils.logger import logger
 
 
@@ -366,14 +367,20 @@ def backup_plugins(window):
         # 获取选择的备份目录
         backup_dir = file_dialog.selectedFiles()[0]
         
-        # 获取插件目录
+        # 获取插件目录和 lib 目录
         plugin_dir = get_plugin_directory()
+        lib_dir = get_lib_directory()
         
         try:
             # 创建插件备份目录
             plugins_backup_dir = os.path.join(backup_dir, "plugins")
             if not os.path.exists(plugins_backup_dir):
                 os.makedirs(plugins_backup_dir)
+            
+            # 创建 lib 备份目录
+            lib_backup_dir = os.path.join(backup_dir, "lib")
+            if not os.path.exists(lib_backup_dir):
+                os.makedirs(lib_backup_dir)
             
             # 复制所有插件文件
             plugin_files_copied = 0
@@ -385,6 +392,20 @@ def backup_plugins(window):
                     dest_path = os.path.join(plugins_backup_dir, item)
                     shutil.copy2(source_path, dest_path)
                     plugin_files_copied += 1
+            
+            # 复制 lib 目录下的依赖
+            lib_files_copied = 0
+            if os.path.exists(lib_dir):
+                for item in os.listdir(lib_dir):
+                    source_path = os.path.join(lib_dir, item)
+                    dest_path = os.path.join(lib_backup_dir, item)
+                    if os.path.isdir(source_path):
+                        if os.path.exists(dest_path):
+                            shutil.rmtree(dest_path)
+                        shutil.copytree(source_path, dest_path)
+                    else:
+                        shutil.copy2(source_path, dest_path)
+                    lib_files_copied += 1
             
             # 导出数据库关联数据
             with Database() as db:
@@ -406,7 +427,7 @@ def backup_plugins(window):
             
             msg_box = QMessageBox(window)
             msg_box.setWindowTitle("备份成功")
-            msg_box.setText(f"成功备份 {plugin_files_copied} 个插件文件和关联数据。")
+            msg_box.setText(f"成功备份 {plugin_files_copied} 个插件文件、{lib_files_copied} 个依赖项和关联数据。")
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
@@ -434,6 +455,7 @@ def restore_plugins(window):
         
         # 检查备份目录是否有效
         plugins_backup_dir = os.path.join(backup_dir, "plugins")
+        lib_backup_dir = os.path.join(backup_dir, "lib")
         backup_data_path = os.path.join(backup_dir, "plugin_backup_data.json")
         
         if not os.path.exists(plugins_backup_dir) or not os.path.exists(backup_data_path):
@@ -445,8 +467,9 @@ def restore_plugins(window):
             msg_box.exec()
             return
         
-        # 获取插件目录
+        # 获取插件目录和 lib 目录
         plugin_dir = get_plugin_directory()
+        lib_dir = get_lib_directory()
         
         try:
             # 复制所有插件文件
@@ -481,6 +504,21 @@ def restore_plugins(window):
                     
                     shutil.copy2(source_path, dest_path)
                     plugin_files_restored += 1
+            
+            # 恢复 lib 目录下的依赖
+            lib_files_restored = 0
+            if os.path.exists(lib_backup_dir):
+                for item in os.listdir(lib_backup_dir):
+                    source_path = os.path.join(lib_backup_dir, item)
+                    dest_path = os.path.join(lib_dir, item)
+                    
+                    if os.path.isdir(source_path):
+                        if os.path.exists(dest_path):
+                            shutil.rmtree(dest_path)
+                        shutil.copytree(source_path, dest_path)
+                    else:
+                        shutil.copy2(source_path, dest_path)
+                    lib_files_restored += 1
             
             # 导入数据库关联数据
             with open(backup_data_path, "r", encoding="utf-8") as f:
@@ -552,7 +590,7 @@ def restore_plugins(window):
             
             msg_box = QMessageBox(window)
             msg_box.setWindowTitle("恢复成功")
-            msg_box.setText(f"成功恢复 {plugin_files_restored} 个插件文件和关联数据。")
+            msg_box.setText(f"成功恢复 {plugin_files_restored} 个插件文件、{lib_files_restored} 个依赖项和关联数据。")
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()

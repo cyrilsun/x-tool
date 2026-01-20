@@ -1,9 +1,20 @@
-import pymysql
+import os
+import sys
 import logging
 from typing import List, Dict, Any
 from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QTextEdit, QLabel, QMessageBox, QGroupBox
 
 from src.plugins.base_plugin import BasePlugin
+
+# 尝试导入 pymysql，并记录错误信息
+def try_import_pymysql():
+    try:
+        import pymysql
+        return pymysql, "Success"
+    except Exception as e:
+        return None, str(e)
+
+pymysql, import_error_msg = try_import_pymysql()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -162,13 +173,28 @@ class HuitoukanPlugin(BasePlugin):
     def __init__(self):
         super().__init__("回头看工单", "设置回头看工单的状态")
 
-        self.work_order_back_tool = WorkOrderBackTool(
-            host="112.6.205.8",
-            port=35403,
-            user="user_gov_update",
-            password="$137%Nauk4C2@*J4qP!",
-            database="jiaoxinban"
-        )
+        # 再次尝试导入（防止路径加载延迟）
+        global pymysql, import_error_msg
+        if pymysql is None:
+            from src.utils.path_utils import get_lib_directory
+            lib_dir = get_lib_directory()
+            if lib_dir not in sys.path:
+                sys.path.insert(0, lib_dir)
+            pymysql, import_error_msg = try_import_pymysql()
+
+        # 检查 pymysql 依赖
+        if pymysql is None:
+            self.work_order_back_tool = None
+            self._show_dependency_error = True
+        else:
+            self.work_order_back_tool = WorkOrderBackTool(
+                host="112.6.205.8",
+                port=35403,
+                user="user_gov_update",
+                password="$137%Nauk4C2@*J4qP!",
+                database="jiaoxinban"
+            )
+            self._show_dependency_error = False
 
         self._setup_ui()
 
@@ -325,6 +351,33 @@ class HuitoukanPlugin(BasePlugin):
         return self
 
     def update_work_orders(self):
+        # 检查依赖
+        if self._show_dependency_error:
+            from src.utils.path_utils import get_lib_directory
+            expected_lib_path = get_lib_directory()
+            
+            # 获取实际目录内容用于诊断
+            dir_contents = "目录不存在"
+            if os.path.exists(expected_lib_path):
+                try:
+                    dir_contents = str(os.listdir(expected_lib_path))
+                except Exception as e:
+                    dir_contents = f"读取失败: {str(e)}"
+            
+            QMessageBox.critical(
+                self, 
+                "依赖缺失", 
+                f"PyMySQL 库加载失败！\n\n"
+                f"预期路径：{expected_lib_path}\n"
+                f"目录内容：{dir_contents}\n"
+                f"具体错误：{import_error_msg}\n\n"
+                "请确保在上述目录下存在 pymysql 文件夹。\n"
+                "如果您在项目根目录下执行过：\n"
+                "pip install -t lib pymysql\n"
+                "请重新运行软件。 "
+            )
+            return
+        
         selected_index = self.status_combo.currentIndex()
 
         work_order_text = self.work_order_text.toPlainText()

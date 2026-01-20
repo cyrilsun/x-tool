@@ -1,5 +1,14 @@
+# PyQt6 核心框架
 PyQt6
 PyQt6-Qt6
-pymysql
+
+# 数据库 ORM（项目使用 SQLite，无需 MySQL 驱动）
+# pymysql  # 已移除：项目不使用 MySQL
+
+# Excel 数据处理（考勤统计插件需要）
 pandas>=2.0.0
 openpyxl>=3.1.0
+
+# YAML 支持（可选，仅 yaml_json_converter_plugin.py 使用）
+# 如果不使用该插件，可注释掉此行
+# PyYAML>=6.0

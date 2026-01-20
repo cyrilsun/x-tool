@@ -1,4 +1,21 @@
 import sys
+import os
+
+# 导入路径工具
+from src.utils.path_utils import get_app_root, get_lib_directory
+
+# 1. 将项目根目录添加到 sys.path
+root_dir = get_app_root()
+# 如果是 .app 模式，root_dir 是 .app 路径，我们需要把 .app 内部的 Contents/Resources 
+# 或者源代码目录加入 path。但对于 src 来说，我们已经在 main.py 所在的目录了。
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+# 2. 集中管理第三方库：将 lib 目录添加到 sys.path
+lib_dir = get_lib_directory()
+if lib_dir not in sys.path:
+    sys.path.insert(0, lib_dir)
 
 from PyQt6.QtWidgets import QApplication
 

@@ -52,17 +52,36 @@ def get_log_directory() -> str:
 def get_plugin_directory() -> str:
     """获取插件存储目录"""
     root = get_app_root()
-    # 如果是 macOS .app，root 就是包含 .app 的目录（因为 get_app_root 做了处理）
-    # 但要注意 get_app_root 对于 macOS 返回的是 os.path.dirname(app_bundle_path)
-    # 所以直接 join 即可
     if root.endswith('.app'):
         plugin_dir = os.path.join(os.path.dirname(root), "plugins")
     else:
         plugin_dir = os.path.join(root, "plugins")
         
+    # 自动创建目录，方便用户直接使用
     if not os.path.exists(plugin_dir):
         try:
             os.makedirs(plugin_dir, exist_ok=True)
+            # 创建一个空的 __init__.py 确保目录被识别为包
+            with open(os.path.join(plugin_dir, "__init__.py"), "w") as f:
+                pass
         except:
             pass
     return os.path.abspath(plugin_dir)
+
+def get_lib_directory() -> str:
+    """获取第三方库(lib)目录"""
+    root = get_app_root()
+    if root.endswith('.app'):
+        # macOS: 在 X-Tool.app 同级创建 lib
+        lib_dir = os.path.join(os.path.dirname(root), "lib")
+    else:
+        # Windows/Linux: 在 exe 同级创建 lib
+        lib_dir = os.path.join(root, "lib")
+        
+    # 自动创建目录
+    if not os.path.exists(lib_dir):
+        try:
+            os.makedirs(lib_dir, exist_ok=True)
+        except:
+            pass
+    return os.path.abspath(lib_dir)
