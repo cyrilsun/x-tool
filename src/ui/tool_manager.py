@@ -122,7 +122,9 @@ class ToolManager:
             # 从数据库中删除插件和关联
             from src.db.database import Database
             from src.plugins.plugin_loader import get_plugin_directory
+            from src.utils.path_utils import get_lib_directory
             import os
+            import shutil
             
             with Database() as db:
                 # 获取插件文件名
@@ -197,14 +199,84 @@ class ToolManager:
                     self.main_window.tool_stack_widget.removeWidget(widget)
                     widget.deleteLater()
             
-            # 显示删除成功消息（仅当show_confirmation为True时，避免删除文件夹时显示多个消息）
+            # 检查是否需要提示删除 lib 依赖（仅当show_confirmation为True时）
             if show_confirmation:
-                msg_box = QMessageBox(self.main_window)
-                msg_box.setWindowTitle("删除成功")
-                msg_box.setText(f"插件 '{tool_name}' 已成功删除。")
-                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
-                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
-                msg_box.exec()
+                lib_dir = get_lib_directory()
+                if os.path.exists(lib_dir):
+                    lib_items = os.listdir(lib_dir)
+                    # 过滤掉系统文件
+                    lib_items = [item for item in lib_items if not item.startswith('.') and item != '__pycache__']
+                    
+                    if lib_items:
+                        # 显示 lib 目录内容列表
+                        lib_list_text = "\n".join([f"  • {item}" for item in lib_items[:10]])  # 最多显示10个
+                        if len(lib_items) > 10:
+                            lib_list_text += f"\n  ... 还有 {len(lib_items) - 10} 个项目"
+                        
+                        msg_box = QMessageBox(self.main_window)
+                        msg_box.setWindowTitle("提示")
+                        msg_box.setText(
+                            f"插件 '{tool_name}' 已删除。\n\n"
+                            f"lib 目录当前包含以下依赖项：\n{lib_list_text}\n\n"
+                            "是否需要清理 lib 目录？\n"
+                            "（注意：如果其他插件使用这些依赖，请勿删除）"
+                        )
+                        msg_box.setStandardButtons(
+                            QMessageBox.StandardButton.Yes | 
+                            QMessageBox.StandardButton.No
+                        )
+                        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+                        msg_box.button(QMessageBox.StandardButton.Yes).setText("删除 lib 目录")
+                        msg_box.button(QMessageBox.StandardButton.No).setText("保留")
+                        
+                        reply = msg_box.exec()
+                        
+                        if reply == QMessageBox.StandardButton.Yes:
+                            # 用户选择删除 lib 目录
+                            try:
+                                shutil.rmtree(lib_dir)
+                                # 重新创建空 lib 目录
+                                os.makedirs(lib_dir)
+                                logger.info(f"已清理 lib 目录: {lib_dir}")
+                                
+                                msg_box = QMessageBox(self.main_window)
+                                msg_box.setWindowTitle("清理成功")
+                                msg_box.setText(f"lib 目录已清理。")
+                                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                                msg_box.exec()
+                            except Exception as e:
+                                logger.error(f"清理 lib 目录失败: {e}")
+                                msg_box = QMessageBox(self.main_window)
+                                msg_box.setWindowTitle("清理失败")
+                                msg_box.setText(f"清理 lib 目录失败：{e}")
+                                msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                                msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                                msg_box.exec()
+                        else:
+                            # 用户选择保留，显示删除成功消息
+                            msg_box = QMessageBox(self.main_window)
+                            msg_box.setWindowTitle("删除成功")
+                            msg_box.setText(f"插件 '{tool_name}' 已成功删除。")
+                            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                            msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                            msg_box.exec()
+                    else:
+                        # lib 目录为空，直接显示删除成功
+                        msg_box = QMessageBox(self.main_window)
+                        msg_box.setWindowTitle("删除成功")
+                        msg_box.setText(f"插件 '{tool_name}' 已成功删除。")
+                        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                        msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                        msg_box.exec()
+                else:
+                    # lib 目录不存在，直接显示删除成功
+                    msg_box = QMessageBox(self.main_window)
+                    msg_box.setWindowTitle("删除成功")
+                    msg_box.setText(f"插件 '{tool_name}' 已成功删除。")
+                    msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+                    msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
+                    msg_box.exec()
         except Exception as e:
             msg_box = QMessageBox(self.main_window)
             msg_box.setWindowTitle("删除失败")
