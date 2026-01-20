@@ -137,24 +137,51 @@ class PluginLoader:
         for item in os.listdir(self.plugin_dir):
             if item.startswith("__"):
                 continue
-            if item.endswith(".py"):
-                plugin_name = item[:-3]
-                plugin_path = os.path.join(self.plugin_dir, item)
-                plugin_details = self.get_plugin_details({
-                    "name": plugin_name,
-                    "path": plugin_path,
-                    "type": "single_file"
-                })
-                plugins.append(plugin_details)
-            elif item.endswith(".pyc"):
-                plugin_name = item[:-4]
-                plugin_path = os.path.join(self.plugin_dir, item)
-                plugin_details = self.get_plugin_details({
-                    "name": plugin_name,
-                    "path": plugin_path,
-                    "type": "single_file"
-                })
-                plugins.append(plugin_details)
+            
+            item_path = os.path.join(self.plugin_dir, item)
+            
+            # 1. 处理单文件插件 (.py 或 .pyc)
+            if os.path.isfile(item_path):
+                if item.endswith(".py"):
+                    plugin_name = item[:-3]
+                    plugin_details = self.get_plugin_details({
+                        "name": plugin_name,
+                        "path": item_path,
+                        "type": "single_file"
+                    })
+                    plugins.append(plugin_details)
+                elif item.endswith(".pyc"):
+                    plugin_name = item[:-4]
+                    plugin_details = self.get_plugin_details({
+                        "name": plugin_name,
+                        "path": item_path,
+                        "type": "single_file"
+                    })
+                    plugins.append(plugin_details)
+            
+            # 2. 处理文件夹形式的插件
+            elif os.path.isdir(item_path):
+                # 优先级 A: 文件夹名_plugin.py (如 speech_draft/speech_draft_plugin.py)
+                target_file = f"{item}_plugin.py"
+                target_path = os.path.join(item_path, target_file)
+                if os.path.exists(target_path):
+                    plugin_details = self.get_plugin_details({
+                        "name": item,
+                        "path": target_path,
+                        "type": "package"
+                    })
+                    plugins.append(plugin_details)
+                    continue
+                
+                # 优先级 B: __init__.py (标准 Python 包格式)
+                init_path = os.path.join(item_path, "__init__.py")
+                if os.path.exists(init_path):
+                    plugin_details = self.get_plugin_details({
+                        "name": item,
+                        "path": init_path,
+                        "type": "package"
+                    })
+                    plugins.append(plugin_details)
 
         return plugins
 

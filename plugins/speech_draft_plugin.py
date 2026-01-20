@@ -1,7 +1,46 @@
 import os
 import sys
 import json
-import requests
+
+# 确保应用根目录下的 lib 目录在搜索路径中，防止打包后找不到第三方库
+def _ensure_lib_path():
+    # 1. 尝试获取插件自身的私有 lib 目录 (如果插件以文件夹形式存在)
+    current_file_dir = os.path.dirname(os.path.abspath(__file__))
+    private_lib = os.path.join(current_file_dir, "lib")
+    if os.path.exists(private_lib) and private_lib not in sys.path:
+        sys.path.insert(0, private_lib)
+
+    # 2. 尝试获取主应用的 lib 目录
+    # 插件文件可能在 plugins/ 或 plugins/folder/ 目录下
+    base_dir = current_file_dir
+    for _ in range(3): # 最多向上找3级
+        if os.path.exists(os.path.join(base_dir, "lib")):
+            lib_path = os.path.join(base_dir, "lib")
+            if lib_path not in sys.path:
+                sys.path.insert(0, lib_path)
+            break
+        base_dir = os.path.dirname(base_dir)
+    
+    # 3. 针对 macOS 打包环境 (.app) 的特殊处理
+    if getattr(sys, 'frozen', False):
+        bundle_dir = os.path.dirname(sys.executable)
+        app_lib = os.path.join(bundle_dir, "..", "Resources", "lib")
+        if os.path.exists(app_lib) and app_lib not in sys.path:
+            sys.path.insert(0, app_lib)
+
+_ensure_lib_path()
+# 显式导入 email 及其子模块，防止某些打包环境剔除标准库
+try:
+    import email
+    import email.mime.text
+    import email.mime.multipart
+except ImportError:
+    pass
+
+try:
+    import requests
+except ImportError:
+    requests = None
 from src.utils.logger import logger
 import threading
 from typing import List, Dict, Any, Optional
@@ -82,7 +121,7 @@ class SpeechDraftPlugin(BasePlugin):
                     self.gen_user_input.setPlainText(gen_p.get("user", "标题：{title}\n关键词：{keywords}\n内容概述：{content}\n联网搜索参考：\n{search_results}\n参考文件：{files}\n\n请开始撰写讲话稿全文："))
                     
                     # 联网搜索配置
-                    self.search_url_input.setText(config.get("search_url", "https://ark.cn-beijing.volces.com/api/v3/bots/batch_chats")) # 火山搜索默认地址
+                    self.search_url_input.setText(config.get("search_url", "https://open.feedcoopapi.com/search_api/web_search"))
                     self.search_key_input.setText(config.get("search_key", ""))
             except Exception as e:
                 logger.error(f"加载 AI 配置失败: {e}")
@@ -259,7 +298,7 @@ class SpeechDraftPlugin(BasePlugin):
         
         content_header.addStretch()
         
-        self.content_count_label = QLabel("0 / 1000")
+        self.content_count_label = QLabel("0 / 2000")
         self.content_count_label.setStyleSheet("color: #909399; font-weight: normal; font-size: 12px;")
         content_header.addWidget(self.content_count_label)
         
@@ -324,7 +363,7 @@ class SpeechDraftPlugin(BasePlugin):
         api_key_layout.addWidget(QLabel("API Key"))
         self.api_key_input = QLineEdit()
         self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.api_key_input.setPlaceholderText("sk-...")
+        self.api_key_input.setPlaceholderText("api key...")
         self.api_key_input.textChanged.connect(self._save_config)
         api_key_layout.addWidget(self.api_key_input)
         
@@ -397,10 +436,10 @@ class SpeechDraftPlugin(BasePlugin):
         search_tab = QWidget()
         search_layout = QVBoxLayout(search_tab)
         
-        self.search_url_input = QLineEdit()
+        self.search_url_input = QLineEdit("https://open.feedcoopapi.com/search_api/web_search")
         self.search_url_input.setPlaceholderText("API URL")
         self.search_url_input.textChanged.connect(self._save_config)
-        search_layout.addWidget(QLabel("Search API URL:"))
+        search_layout.addWidget(QLabel("联网搜索API URL:"))
         search_layout.addWidget(self.search_url_input)
         
         self.search_key_input = QLineEdit()
@@ -575,7 +614,7 @@ class SpeechDraftPlugin(BasePlugin):
             return
 
         if OpenAI is None:
-            QMessageBox.critical(self, "错误", "未安装 openai 库，请运行 'pip install -t lib openai'")
+            QMessageBox.critical(self, "错误", "未安装 openai 库，请在应用根目录下运行 'pip install -t lib openai'")
             return
 
         def task():
@@ -677,7 +716,7 @@ class SpeechDraftPlugin(BasePlugin):
             resp = client.chat.completions.create(
                 model=self.model_input.text().strip(),
                 messages=[{"role": "user", "content": intent_prompt}],
-                temperature=0.3,
+                temperature=0.5,
                 stream=False
             )
             intents = [line.strip() for line in resp.choices[0].message.content.split('\n') if line.strip()][:3]
@@ -698,6 +737,8 @@ class SpeechDraftPlugin(BasePlugin):
 
     def _call_volcano_search(self, query, url, api_key, count=5) -> str:
         """调用火山搜索接口 (同步)"""
+        if requests is None:
+            return "联网搜索失败：未安装 requests 库，请运行 'pip install -t lib requests'"
         headers = {
             'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json'
@@ -785,6 +826,7 @@ class SpeechDraftPlugin(BasePlugin):
         return self
 
     def on_activate(self):
+        logger.info("讲话稿插件被激活")
         pass
 
     def on_deactivate(self):
