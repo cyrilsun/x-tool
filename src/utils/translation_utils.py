@@ -23,9 +23,14 @@ def setup_translation(app):
     qt_translations_path = None
     
     if getattr(sys, 'frozen', False):
-        # 打包后的环境
-        base_path = os.path.dirname(sys.executable)
-        qt_translations_path = os.path.join(base_path, 'translations')
+        # 打包后的环境：使用 _MEIPASS 或相对于可执行文件的 Resources 目录
+        if hasattr(sys, '_MEIPASS'):
+            qt_translations_path = os.path.join(sys._MEIPASS, 'translations')
+        else:
+            # 兼容 macOS .app 结构
+            base_path = os.path.dirname(sys.executable)
+            qt_translations_path = os.path.join(os.path.dirname(base_path), 'Resources', 'translations')
+        
         logger.debug(f"打包环境翻译文件路径: {qt_translations_path}")
     else:
         # 开发环境
@@ -53,32 +58,23 @@ def setup_translation(app):
         else:
             logger.warning(f"翻译文件目录不存在: {qt_translations_path}")
     
-    # 尝试加载翻译文件，使用更灵活的方式
-    translation_loaded = False
-    
+    # 尝试加载翻译文件
     if qt_translations_path and os.path.exists(qt_translations_path):
-        # 创建翻译器实例并存储到app对象中，防止被垃圾回收
         app._translators = []
         
-        # 尝试加载qt_zh_CN.qm
-        translator = QTranslator()
-        if translator.load("qt_zh_CN", qt_translations_path):
-            app.installTranslator(translator)
-            app._translators.append(translator)
-            logger.debug("已加载qt_zh_CN.qm翻译文件")
-            translation_loaded = True
-        else:
-            logger.warning("未能加载qt_zh_CN.qm翻译文件")
-            
-            # 尝试加载qtbase_zh_CN.qm（可能需要同时加载这两个文件）
-            translator_base = QTranslator()
-            if translator_base.load("qtbase_zh_CN", qt_translations_path):
-                app.installTranslator(translator_base)
-                app._translators.append(translator_base)
-                logger.debug("已加载qtbase_zh_CN.qm翻译文件")
+        # 定义需要加载的翻译文件列表
+        # qt_zh_CN 包含大部分翻译，qtbase_zh_CN 包含基础组件翻译
+        translators_to_load = ["qt_zh_CN", "qtbase_zh_CN"]
+        
+        for t_name in translators_to_load:
+            translator = QTranslator()
+            if translator.load(t_name, qt_translations_path):
+                app.installTranslator(translator)
+                app._translators.append(translator)
+                logger.debug(f"成功加载翻译文件: {t_name}.qm")
                 translation_loaded = True
             else:
-                logger.warning("未能加载qtbase_zh_CN.qm翻译文件")
+                logger.warning(f"未能加载翻译文件: {t_name}.qm")
     
     # 确保应用程序菜单文本已更新
     if translation_loaded:

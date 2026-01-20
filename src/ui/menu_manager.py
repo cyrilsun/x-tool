@@ -52,6 +52,7 @@ class MenuManager:
 
         # 创建并保存退出菜单项引用
         self.quit_action = QAction("退出X-Tool", self.main_window)
+        self.quit_action.setMenuRole(QAction.MenuRole.QuitRole)
         self.quit_action.triggered.connect(self.main_window.close)
         self.file_menu.addAction(self.quit_action)
 
@@ -60,6 +61,7 @@ class MenuManager:
 
         # 创建并保存关于菜单项引用
         self.about_action = QAction("关于", self.main_window)
+        self.about_action.setMenuRole(QAction.MenuRole.AboutRole)
         self.about_action.triggered.connect(lambda: show_about_dialog(self.main_window))
         self.help_menu.addAction(self.about_action)
 
