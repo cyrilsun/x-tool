@@ -65,6 +65,20 @@ class SpeechDraftPlugin(BasePlugin):
                     self.model_input.setText(config.get("model", "gpt-3.5-turbo"))
                     self.temp_input.setText(str(config.get("temperature", "0.7")))
                     self.max_tokens_input.setText(str(config.get("max_tokens", "2048")))
+                    
+                    # 加载提示词配置
+                    prompts = config.get("prompts", {})
+                    kw_p = prompts.get("keywords", {})
+                    self.kw_sys_input.setPlainText(kw_p.get("system", "你是一个专业的文案助手。"))
+                    self.kw_user_input.setPlainText(kw_p.get("user", "请根据文章标题“{title}”，生成3-5个相关的讲话稿关键词，以逗号分隔。仅返回关键词本身。"))
+                    
+                    sum_p = prompts.get("summary", {})
+                    self.sum_sys_input.setPlainText(sum_p.get("system", "你是一个专业的文案助手。"))
+                    self.sum_user_input.setPlainText(sum_p.get("user", "请根据文章标题“{title}”，撰写一段简短的内容概述，描述讲话的场景、听众和核心要点。字数在100字左右。"))
+                    
+                    gen_p = prompts.get("generation", {})
+                    self.gen_sys_input.setPlainText(gen_p.get("system", "你是一个专业的讲话稿写作专家。请根据用户提供的标题、关键词和内容概述，撰写一份高质量、得体、富有感染力的讲话稿。"))
+                    self.gen_user_input.setPlainText(gen_p.get("user", "标题：{title}\n关键词：{keywords}\n内容概述：{content}\n参考文件：{files}\n\n请开始撰写讲话稿全文："))
             except Exception as e:
                 logger.error(f"加载 AI 配置失败: {e}")
 
@@ -75,7 +89,21 @@ class SpeechDraftPlugin(BasePlugin):
             "api_key": self.api_key_input.text().strip(),
             "model": self.model_input.text().strip(),
             "temperature": self.temp_input.text().strip(),
-            "max_tokens": self.max_tokens_input.text().strip()
+            "max_tokens": self.max_tokens_input.text().strip(),
+            "prompts": {
+                "keywords": {
+                    "system": self.kw_sys_input.toPlainText(),
+                    "user": self.kw_user_input.toPlainText()
+                },
+                "summary": {
+                    "system": self.sum_sys_input.toPlainText(),
+                    "user": self.sum_user_input.toPlainText()
+                },
+                "generation": {
+                    "system": self.gen_sys_input.toPlainText(),
+                    "user": self.gen_user_input.toPlainText()
+                }
+            }
         }
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
@@ -88,8 +116,22 @@ class SpeechDraftPlugin(BasePlugin):
         self.one_shot_signals = StreamWorkerSignals()
         self.one_shot_signals.oneshot_finished.connect(self._on_oneshot_finished)
         
+        # 创建外层布局以包含滚动区域
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # 创建滚动区域
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        # 创建内容容器
+        container = QWidget()
+        container.setObjectName("speech_draft_container")
+        
         # 主布局
-        main_layout = QVBoxLayout(self)
+        main_layout = QVBoxLayout(container)
         main_layout.setContentsMargins(30, 20, 30, 20)
         main_layout.setSpacing(15)
         
@@ -252,16 +294,22 @@ class SpeechDraftPlugin(BasePlugin):
         adv_layout.addStretch()
         main_layout.addLayout(adv_layout)
 
-        # 6. 配置选项 (模型配置)
-        self.settings_group = QGroupBox("模型配置")
-        settings_layout = QVBoxLayout()
+        # 6. 配置选项 (整合为高级配置)
+        self.settings_group = QGroupBox("高级配置")
+        self.settings_group.setMinimumHeight(480) # 调大配置区域高度
+        settings_main_layout = QVBoxLayout()
         
-        # 将所有设置排成两行
+        from PyQt6.QtWidgets import QTabWidget
+        self.config_tabs = QTabWidget()
+        
+        # --- Tab 1: 模型设置 ---
+        model_tab = QWidget()
+        model_layout = QVBoxLayout(model_tab)
+        
         row1_layout = QHBoxLayout()
-        
         api_base_layout = QVBoxLayout()
         api_base_layout.addWidget(QLabel("API Base"))
-        self.api_base_input = QLineEdit("https://api.openai.com/v1")
+        self.api_base_input = QLineEdit("https://ark.cn-beijing.volces.com/api/v3/")
         self.api_base_input.textChanged.connect(self._save_config)
         api_base_layout.addWidget(self.api_base_input)
         
@@ -278,41 +326,73 @@ class SpeechDraftPlugin(BasePlugin):
         row1_layout.addLayout(api_key_layout, 3)
         
         row2_layout = QHBoxLayout()
-        
-        model_layout = QVBoxLayout()
-        model_layout.addWidget(QLabel("Model"))
-        self.model_input = QLineEdit("gpt-3.5-turbo")
+        model_name_layout = QVBoxLayout()
+        model_name_layout.addWidget(QLabel("Model"))
+        self.model_input = QLineEdit("doubao-seed-1-8-251228")
         self.model_input.textChanged.connect(self._save_config)
-        model_layout.addWidget(self.model_input)
+        model_name_layout.addWidget(self.model_input)
         
         temp_layout = QVBoxLayout()
         temp_layout.addWidget(QLabel("Temperature"))
         self.temp_input = QLineEdit("0.7")
-        self.temp_input.setPlaceholderText("0.0-2.0")
         self.temp_input.textChanged.connect(self._save_config)
         temp_layout.addWidget(self.temp_input)
         
         max_tokens_layout = QVBoxLayout()
         max_tokens_layout.addWidget(QLabel("Max Tokens"))
-        self.max_tokens_input = QLineEdit("2048")
-        self.max_tokens_input.setPlaceholderText("2048")
+        self.max_tokens_input = QLineEdit("4096")
         self.max_tokens_input.textChanged.connect(self._save_config)
         max_tokens_layout.addWidget(self.max_tokens_input)
         
-        row2_layout.addLayout(model_layout, 2)
+        row2_layout.addLayout(model_name_layout, 2)
         row2_layout.addSpacing(15)
         row2_layout.addLayout(temp_layout, 1)
         row2_layout.addSpacing(15)
         row2_layout.addLayout(max_tokens_layout, 1)
         
-        settings_layout.addLayout(row1_layout)
-        settings_layout.addSpacing(5)
-        settings_layout.addLayout(row2_layout)
-        self.settings_group.setLayout(settings_layout)
-        self.settings_group.setVisible(False) # 默认隐藏
+        model_layout.addLayout(row1_layout)
+        model_layout.addSpacing(10)
+        model_layout.addLayout(row2_layout)
+        
+        # --- Tab 2: 提示词配置 ---
+        prompt_tab = QScrollArea()
+        prompt_tab.setWidgetResizable(True)
+        prompt_container = QWidget()
+        prompt_layout = QVBoxLayout(prompt_container)
+        
+        def create_prompt_box(title, sys_attr, user_attr):
+            box = QGroupBox(title)
+            blayout = QVBoxLayout()
+            blayout.addWidget(QLabel("System Prompt:"))
+            sys_input = QTextEdit()
+            sys_input.setMaximumHeight(60)
+            sys_input.textChanged.connect(self._save_config)
+            setattr(self, sys_attr, sys_input)
+            blayout.addWidget(sys_input)
+            
+            blayout.addWidget(QLabel("User Prompt Template:"))
+            user_input = QTextEdit()
+            user_input.setMaximumHeight(100)
+            user_input.textChanged.connect(self._save_config)
+            setattr(self, user_attr, user_input)
+            blayout.addWidget(user_input)
+            box.setLayout(blayout)
+            return box
+
+        prompt_layout.addWidget(create_prompt_box("关键词生成", "kw_sys_input", "kw_user_input"))
+        prompt_layout.addWidget(create_prompt_box("内容概述生成", "sum_sys_input", "sum_user_input"))
+        prompt_layout.addWidget(create_prompt_box("讲话稿正文生成", "gen_sys_input", "gen_user_input"))
+        prompt_tab.setWidget(prompt_container)
+        
+        self.config_tabs.addTab(model_tab, "模型设置")
+        self.config_tabs.addTab(prompt_tab, "提示词配置")
+        
+        settings_main_layout.addWidget(self.config_tabs)
+        self.settings_group.setLayout(settings_main_layout)
+        self.settings_group.setVisible(False)
         
         # 切换设置按钮
-        self.toggle_settings_btn = QPushButton("模型配置")
+        self.toggle_settings_btn = QPushButton("高级配置")
         self.toggle_settings_btn.setObjectName("secondary_btn")
         self.toggle_settings_btn.clicked.connect(lambda: self.settings_group.setVisible(not self.settings_group.isVisible()))
         
@@ -359,6 +439,10 @@ class SpeechDraftPlugin(BasePlugin):
         output_footer.addWidget(self.copy_btn)
         output_footer.addWidget(self.export_btn)
         main_layout.addLayout(output_footer)
+        
+        # 将内容容器装载到滚动区域，并将滚动区域放入外层布局
+        self.scroll_area.setWidget(container)
+        outer_layout.addWidget(self.scroll_area)
 
     def _copy_content(self):
         """复制内容到剪贴板"""
@@ -423,8 +507,9 @@ class SpeechDraftPlugin(BasePlugin):
             QMessageBox.warning(self, "提醒", "请先输入文章标题")
             return
         
-        prompt = f"请根据文章标题“{title}”，生成3-5个相关的讲话稿关键词，以逗号分隔。仅返回关键词本身。"
-        self._call_ai_oneshot(prompt, self.kw_input)
+        sys_p = self.kw_sys_input.toPlainText().strip()
+        user_p = self.kw_user_input.toPlainText().strip().format(title=title)
+        self._call_ai_oneshot(sys_p, user_p, self.kw_input)
 
     def _ai_generate_summary(self):
         title = self.title_input.text().strip()
@@ -432,8 +517,9 @@ class SpeechDraftPlugin(BasePlugin):
             QMessageBox.warning(self, "提醒", "请先输入文章标题")
             return
         
-        prompt = f"请根据文章标题“{title}”，撰写一段简短的内容概述，描述讲话的场景、听众和核心要点。字数在100字左右。"
-        self._call_ai_oneshot(prompt, self.content_input)
+        sys_p = self.sum_sys_input.toPlainText().strip()
+        user_p = self.sum_user_input.toPlainText().strip().format(title=title)
+        self._call_ai_oneshot(sys_p, user_p, self.content_input)
 
     def _on_oneshot_finished(self, content, target_widget):
         """安全地在主线程更新 UI"""
@@ -442,14 +528,14 @@ class SpeechDraftPlugin(BasePlugin):
         elif isinstance(target_widget, QTextEdit):
             target_widget.setPlainText(content)
 
-    def _call_ai_oneshot(self, prompt, target_widget):
+    def _call_ai_oneshot(self, system_prompt, user_prompt, target_widget):
         """单次非流式调用 AI (用于生成关键词和概述)"""
         api_key = self.api_key_input.text().strip()
         api_base = self.api_base_input.text().strip()
         model = self.model_input.text().strip()
         
         if not api_key:
-            QMessageBox.warning(self, "提醒", "请先在模型配置中设置 API Key")
+            QMessageBox.warning(self, "提醒", "请先在高级配置中设置 API Key")
             self.settings_group.setVisible(True)
             return
 
@@ -459,13 +545,13 @@ class SpeechDraftPlugin(BasePlugin):
 
         def task():
             try:
-                logger.info(f"AI单次调用提示词: {prompt[:500]}")
+                logger.info(f"AI单次调用提示词: \nSys: {system_prompt}\nUser: {user_prompt[:500]}")
                 client = OpenAI(api_key=api_key, base_url=api_base)
                 response = client.chat.completions.create(
                     model=model,
                     messages=[
-                        {"role": "system", "content": "你是一个专业的文案助手。"},
-                        {"role": "user", "content": prompt}
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
                     ],
                     temperature=float(self.temp_input.text().strip()) if self.temp_input.text().strip() else 0.7,
                     max_tokens=int(self.max_tokens_input.text().strip()) if self.max_tokens_input.text().strip() else 1000,
@@ -504,20 +590,19 @@ class SpeechDraftPlugin(BasePlugin):
         # 准备提示词
         keywords = self.kw_input.text().strip()
         content_summary = self.content_input.toPlainText().strip()
+        files_str = f"已上传 {len(self.reference_files)} 个相关文档" if self.reference_files else "无"
         
-        system_prompt = "你是一个专业的讲话稿写作专家。请根据用户提供的标题、关键词和内容概述，撰写一份高质量、得体、富有感染力的讲话稿。"
+        system_prompt = self.gen_sys_input.toPlainText().strip()
         if self.search_check.isChecked():
             system_prompt += " 请结合最新的行业动态和联网搜索的信息（模拟）。"
 
-        user_prompt = f"标题：{title}\n"
-        if keywords:
-            user_prompt += f"关键词：{keywords}\n"
-        if content_summary:
-            user_prompt += f"内容概述：{content_summary}\n"
-        if self.reference_files:
-            user_prompt += f"参考文件：已上传 {len(self.reference_files)} 个相关文档（请根据文档背景进行创作）。\n"
-        
-        user_prompt += "\n请开始撰写讲话稿全文："
+        user_prompt_template = self.gen_user_input.toPlainText().strip()
+        user_prompt = user_prompt_template.format(
+            title=title,
+            keywords=keywords or "无",
+            content=content_summary or "无",
+            files=files_str
+        )
 
         # 创建并启动流式处理线程
         self.signals = StreamWorkerSignals()
