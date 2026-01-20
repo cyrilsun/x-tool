@@ -1,7 +1,7 @@
 import os
 import sys
 import json
-import logging
+from src.utils.logger import logger
 import threading
 from typing import List, Dict, Any, Optional
 
@@ -13,6 +13,12 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QSize
 from PyQt6.QtGui import QFont, QIcon, QColor
 
+# 尝试导入 python-docx
+try:
+    from docx import Document
+except ImportError:
+    Document = None
+
 from src.plugins.base_plugin import BasePlugin
 
 # 尝试导入 openai，如果失败则提示安装
@@ -21,7 +27,6 @@ try:
 except ImportError:
     OpenAI = None
 
-logger = logging.getLogger('SpeechDraftPlugin')
 
 class StreamWorkerSignals(QObject):
     """处理信号"""
@@ -196,6 +201,13 @@ class SpeechDraftPlugin(BasePlugin):
         content_layout = QVBoxLayout()
         content_header = QHBoxLayout()
         content_header.addWidget(QLabel("内容"))
+        
+        self.ai_content_btn = QPushButton("AI写内容概述")
+        self.ai_content_btn.setObjectName("link_btn")
+        self.ai_content_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.ai_content_btn.clicked.connect(self._ai_generate_summary)
+        content_header.addWidget(self.ai_content_btn)
+        
         content_header.addStretch()
         
         self.content_count_label = QLabel("0 / 1000")
@@ -207,16 +219,8 @@ class SpeechDraftPlugin(BasePlugin):
         self.content_input.setMaximumHeight(120)
         self.content_input.textChanged.connect(self._update_content_count)
         
-        content_footer = QHBoxLayout()
-        self.ai_content_btn = QPushButton("AI写内容概述")
-        self.ai_content_btn.setObjectName("secondary_btn")
-        self.ai_content_btn.clicked.connect(self._ai_generate_summary)
-        content_footer.addWidget(self.ai_content_btn)
-        content_footer.addStretch()
-        
         content_layout.addLayout(content_header)
         content_layout.addWidget(self.content_input)
-        content_layout.addLayout(content_footer)
         main_layout.addLayout(content_layout)
 
         # 4. 参考文档
@@ -340,6 +344,65 @@ class SpeechDraftPlugin(BasePlugin):
         self.output_area.setMinimumHeight(300)
         main_layout.addWidget(self.output_area)
 
+        # 9. 输出底部按钮
+        output_footer = QHBoxLayout()
+        
+        self.copy_btn = QPushButton("复制正文")
+        self.copy_btn.setObjectName("secondary_btn")
+        self.copy_btn.clicked.connect(self._copy_content)
+        
+        self.export_btn = QPushButton("导出为 Word")
+        self.export_btn.setObjectName("secondary_btn")
+        self.export_btn.clicked.connect(self._export_to_word)
+        
+        output_footer.addStretch()
+        output_footer.addWidget(self.copy_btn)
+        output_footer.addWidget(self.export_btn)
+        main_layout.addLayout(output_footer)
+
+    def _copy_content(self):
+        """复制内容到剪贴板"""
+        text = self.output_area.toPlainText().strip()
+        if not text:
+            return
+        
+        from PyQt6.QtWidgets import QApplication
+        QApplication.clipboard().setText(text)
+        QMessageBox.information(self, "成功", "已复制到剪贴板")
+
+    def _export_to_word(self):
+        """导出内容为 Word 文档"""
+        text = self.output_area.toPlainText().strip()
+        if not text:
+            QMessageBox.warning(self, "提醒", "当前没有可导出的内容")
+            return
+
+        if Document is None:
+            QMessageBox.critical(self, "错误", "未安装 python-docx 库，请运行 'pip install -t lib python-docx'")
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "导出讲话稿", f"{self.title_input.text().strip() or '未命名讲话稿'}.docx", "Word Documents (*.docx)"
+        )
+
+        if file_path:
+            try:
+                doc = Document()
+                title = self.title_input.text().strip()
+                if title:
+                    doc.add_heading(title, 0)
+                
+                # 分段写入
+                for paragraph in text.split('\n'):
+                    if paragraph.strip():
+                        doc.add_paragraph(paragraph)
+                
+                doc.save(file_path)
+                QMessageBox.information(self, "成功", f"讲话稿已成功导出至：\n{file_path}")
+            except Exception as e:
+                logger.error(f"导出 Word 失败: {e}")
+                QMessageBox.critical(self, "错误", f"导出失败: {str(e)}")
+
     def _update_title_count(self):
         count = len(self.title_input.text())
         self.title_count_label.setText(f"{count} / 50")
@@ -396,6 +459,7 @@ class SpeechDraftPlugin(BasePlugin):
 
         def task():
             try:
+                logger.info(f"AI单次调用提示词: {prompt[:500]}")
                 client = OpenAI(api_key=api_key, base_url=api_base)
                 response = client.chat.completions.create(
                     model=model,
@@ -467,6 +531,9 @@ class SpeechDraftPlugin(BasePlugin):
         api_key = self.api_key_input.text().strip()
         api_base = self.api_base_input.text().strip()
         model = self.model_input.text().strip()
+        
+        logger.info(f"AI写讲话稿 - 系统提示词: {system_prompt}")
+        logger.info(f"AI写讲话稿 - 用户提示词: {user_prompt}")
         
         try:
             client = OpenAI(api_key=api_key, base_url=api_base)
