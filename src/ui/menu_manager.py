@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
 
-from src.plugins.plugin_manager import import_plugin, backup_plugins, restore_plugins
+from src.plugins.plugin_manager import import_plugin, backup_plugins, restore_plugins, export_single_plugin
 from src.utils.app_utils import show_about_dialog
 
 
@@ -151,6 +151,20 @@ class MenuManager:
     def _show_tool_context_menu(self, position, tool_item):
         """显示工具的上下文菜单"""
         menu = QMenu()
+
+        # 导出插件
+        export_plugin_action = menu.addAction("导出插件")
+        item_data = tool_item.data(0, Qt.ItemDataRole.UserRole)
+        if item_data and item_data.get("type") == "tool":
+            plugin_name = item_data.get("name")  # 使用 "name" 而不是 "tool_name"
+            if plugin_name:  # 确保插件名不为空
+                export_plugin_action.triggered.connect(lambda: export_single_plugin(self.main_window, plugin_name))
+            else:
+                export_plugin_action.setEnabled(False)  # 禁用菜单项
+        else:
+            export_plugin_action.setEnabled(False)  # 禁用菜单项
+        
+        menu.addSeparator()
 
         # 删除插件
         delete_plugin_action = menu.addAction("删除插件")

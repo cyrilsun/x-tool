@@ -56,7 +56,7 @@ def build_macos(args):
         'tkinter',           # Tk GUI 框架
         'test',              # Python 测试模块
         'unittest',          # 单元测试
-        'email',             # 邮件处理
+        # 'email',           # ❗️ 不能排除！requests 和 openai 依赖此模块
         'http.server',       # HTTP 服务器
         # 'urllib',          # ⚠️ 不能排除！被 zipfile、pathlib 等核心模块依赖
         'pydoc',             # 文档生成
@@ -81,11 +81,24 @@ def build_macos(args):
         "--osx-bundle-identifier=com.xtool.app",
         "--add-data=resources:resources",
         f"--add-data={translations_src}:translations",
-        "--collect-data=src.plugins",
+        # 注释掉：不打包 plugins 目录，让应用从外部 dist/plugins/ 加载
+        # "--collect-data=src.plugins",
         "--hidden-import=PyQt6",
         "--hidden-import=pandas",
         "--hidden-import=openpyxl",
         "--hidden-import=configparser",
+        # requests/openai 依赖的标准库模块
+        "--hidden-import=email",
+        "--hidden-import=email.mime",
+        "--hidden-import=email.mime.text",
+        "--hidden-import=email.mime.multipart",
+        "--hidden-import=ipaddress",
+        "--hidden-import=http.cookies",
+        "--hidden-import=http.client",
+        "--hidden-import=zoneinfo",
+        "--hidden-import=urllib",
+        "--hidden-import=urllib.parse",
+        "--hidden-import=urllib.request",
         "--icon=icon.icns",
     ]
     
@@ -116,8 +129,8 @@ def build_macos(args):
     return True
 
 def build_windows(args):
-    """构庺Windows版本（优化版）"""
-    print("正在构庺Windows版本...")
+    """构建 Windows版本（优化版）"""
+    print("正在构建 Windows版本...")
     
     # 获取PyQt6翻译文件路径
     import PyQt6
@@ -126,7 +139,9 @@ def build_windows(args):
     
     # 排除不需要的模块
     exclude_modules = [
-        'tkinter', 'test', 'unittest', 'email', 'http.server',
+        'tkinter', 'test', 'unittest', 
+        # 'email',  # ❗️ 不能排除！requests 和 openai 依赖此模块
+        'http.server',
         # 'urllib',  # ⚠️ 不能排除！被 zipfile、pathlib 等核心模块依赖
         'pydoc', 'distutils', 'setuptools', 'pip',
         'PyQt6.QtWebEngineWidgets', 'PyQt6.QtWebEngineCore',
@@ -141,11 +156,24 @@ def build_windows(args):
         "--windowed",
         "--add-data=resources;resources",
         f"--add-data={translations_src};translations",
-        "--collect-data=src.plugins",
+        # 注释掉：不打包 plugins 目录，让应用从外部 dist/plugins/ 加载
+        # "--collect-data=src.plugins",
         "--hidden-import=PyQt6",
         "--hidden-import=pandas",
         "--hidden-import=openpyxl",
         "--hidden-import=configparser",
+        # requests/openai 依赖的标准库模块
+        "--hidden-import=email",
+        "--hidden-import=email.mime",
+        "--hidden-import=email.mime.text",
+        "--hidden-import=email.mime.multipart",
+        "--hidden-import=ipaddress",
+        "--hidden-import=http.cookies",
+        "--hidden-import=http.client",
+        "--hidden-import=zoneinfo",
+        "--hidden-import=urllib",
+        "--hidden-import=urllib.parse",
+        "--hidden-import=urllib.request",
     ]
     
     for module in exclude_modules:
@@ -171,8 +199,8 @@ def build_windows(args):
     return True
 
 def build_linux(args):
-    """构建Linux版本（优化版）"""
-    print("正在构建Linux版本...")
+    """构建 Linux版本（优化版）"""
+    print("正在构建 Linux版本...")
     
     # 获取PyQt6翻译文件路径
     import PyQt6
@@ -181,7 +209,9 @@ def build_linux(args):
     
     # 排除不需要的模块
     exclude_modules = [
-        'tkinter', 'test', 'unittest', 'email', 'http.server',
+        'tkinter', 'test', 'unittest', 
+        # 'email',  # ❗️ 不能排除！requests 和 openai 依赖此模块
+        'http.server',
         # 'urllib',  # ⚠️ 不能排除！被 zipfile、pathlib 等核心模块依赖
         'pydoc', 'distutils', 'setuptools', 'pip',
         'PyQt6.QtWebEngineWidgets', 'PyQt6.QtWebEngineCore',
@@ -196,11 +226,24 @@ def build_linux(args):
         "--windowed",
         "--add-data=resources:resources",
         f"--add-data={translations_src}:translations",
-        "--collect-data=src.plugins",
+        # 注释掉：不打包 plugins 目录，让应用从外部 dist/plugins/ 加载
+        # "--collect-data=src.plugins",
         "--hidden-import=PyQt6",
         "--hidden-import=pandas",
         "--hidden-import=openpyxl",
         "--hidden-import=configparser",
+        # requests/openai 依赖的标准库模块
+        "--hidden-import=email",
+        "--hidden-import=email.mime",
+        "--hidden-import=email.mime.text",
+        "--hidden-import=email.mime.multipart",
+        "--hidden-import=ipaddress",
+        "--hidden-import=http.cookies",
+        "--hidden-import=http.client",
+        "--hidden-import=zoneinfo",
+        "--hidden-import=urllib",
+        "--hidden-import=urllib.parse",
+        "--hidden-import=urllib.request",
     ]
     
     for module in exclude_modules:
@@ -235,7 +278,7 @@ def main():
         return
     
     # 确保必要目录存在
-    for d in ["resources", "plugins", "lib"]:
+    for d in ["resources", "plugins"]:
         if not os.path.exists(d):
             os.makedirs(d)
             print(f"创建目录: {d}")
@@ -259,7 +302,7 @@ def main():
         # 后置处理：拷贝外部文件夹到 dist 目录
         print("\n正在执行后置处理（拷贝外部文件夹）...")
         dist_dir = "dist"
-        folders_to_copy = ["plugins", "lib"]
+        folders_to_copy = ["plugins"]  # 移除 lib，由插件按需下载依赖
         
         for folder in folders_to_copy:
             src_path = folder

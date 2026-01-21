@@ -17,6 +17,17 @@ lib_dir = get_lib_directory()
 if lib_dir not in sys.path:
     sys.path.insert(0, lib_dir)
 
+# 调试信息：打印关键路径（便于排查打包环境问题）
+if getattr(sys, 'frozen', False):
+    print(f"[DEBUG] Running in packaged mode")
+    print(f"[DEBUG] sys.executable: {sys.executable}")
+    print(f"[DEBUG] root_dir: {root_dir}")
+    print(f"[DEBUG] lib_dir: {lib_dir}")
+    print(f"[DEBUG] lib_dir exists: {os.path.exists(lib_dir)}")
+    print(f"[DEBUG] lib_dir in sys.path: {lib_dir in sys.path}")
+    if os.path.exists(lib_dir):
+        print(f"[DEBUG] lib_dir contents: {os.listdir(lib_dir)[:5]}...")  # 只显示前5个
+
 from PyQt6.QtWidgets import QApplication
 
 from src.config.app_config import VERSION

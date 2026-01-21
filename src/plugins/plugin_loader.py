@@ -92,11 +92,13 @@ class PluginLoader:
                     if os.path.exists(py_file_path):
                         spec = importlib.util.spec_from_file_location(plugin_name, py_file_path)
                         module = importlib.util.module_from_spec(spec)
+                        sys.modules[plugin_name] = module
                         spec.loader.exec_module(module)
             else:
                 # 加载 .py 文件
                 spec = importlib.util.spec_from_file_location(plugin_name, plugin_path)
                 module = importlib.util.module_from_spec(spec)
+                sys.modules[plugin_name] = module
                 spec.loader.exec_module(module)
 
             if module:
@@ -207,11 +209,15 @@ class PluginLoader:
                     if os.path.exists(py_file_path):
                         spec = importlib.util.spec_from_file_location(plugin_name, py_file_path)
                         module = importlib.util.module_from_spec(spec)
+                        # 关键修复：将模块添加到 sys.modules
+                        sys.modules[plugin_name] = module
                         spec.loader.exec_module(module)
             else:
                 # 加载 .py 文件
                 spec = importlib.util.spec_from_file_location(plugin_name, plugin_path)
                 module = importlib.util.module_from_spec(spec)
+                # 关键修复：将模块添加到 sys.modules，以便后续可以清除缓存
+                sys.modules[plugin_name] = module
                 spec.loader.exec_module(module)
 
             if module:

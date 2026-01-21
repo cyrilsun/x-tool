@@ -1,34 +1,10 @@
+import json
 import os
 import sys
-import json
 
-# 确保应用根目录下的 lib 目录在搜索路径中，防止打包后找不到第三方库
-def _ensure_lib_path():
-    # 1. 尝试获取插件自身的私有 lib 目录 (如果插件以文件夹形式存在)
-    current_file_dir = os.path.dirname(os.path.abspath(__file__))
-    private_lib = os.path.join(current_file_dir, "lib")
-    if os.path.exists(private_lib) and private_lib not in sys.path:
-        sys.path.insert(0, private_lib)
+# 注意：lib 路径已由 main.py 统一设置，插件无需再次处理
+# main.py 会在应用启动时将 lib 目录添加到 sys.path
 
-    # 2. 尝试获取主应用的 lib 目录
-    # 插件文件可能在 plugins/ 或 plugins/folder/ 目录下
-    base_dir = current_file_dir
-    for _ in range(3): # 最多向上找3级
-        if os.path.exists(os.path.join(base_dir, "lib")):
-            lib_path = os.path.join(base_dir, "lib")
-            if lib_path not in sys.path:
-                sys.path.insert(0, lib_path)
-            break
-        base_dir = os.path.dirname(base_dir)
-    
-    # 3. 针对 macOS 打包环境 (.app) 的特殊处理
-    if getattr(sys, 'frozen', False):
-        bundle_dir = os.path.dirname(sys.executable)
-        app_lib = os.path.join(bundle_dir, "..", "Resources", "lib")
-        if os.path.exists(app_lib) and app_lib not in sys.path:
-            sys.path.insert(0, app_lib)
-
-_ensure_lib_path()
 # 显式导入 email 及其子模块，防止某些打包环境剔除标准库
 try:
     import email
@@ -37,35 +13,24 @@ try:
 except ImportError:
     pass
 
-try:
-    import requests
-except ImportError:
-    requests = None
+# 注意：延迟导入第三方依赖，避免 PyInstaller 打包环境的导入问题
+# requests、OpenAI、Document 将在 _lazy_import_dependencies() 中按需导入
+requests = None
+OpenAI = None
+Document = None
+
 from src.utils.logger import logger
 import threading
-from typing import List, Dict, Any, Optional
+from typing import List
 
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, 
+    QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
     QTextEdit, QLabel, QMessageBox, QGroupBox, QCheckBox,
-    QScrollArea, QWidget, QFileDialog, QProgressBar, QFrame
+    QScrollArea, QWidget, QFileDialog, QFrame
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QSize
-from PyQt6.QtGui import QFont, QIcon, QColor
-
-# 尝试导入 python-docx
-try:
-    from docx import Document
-except ImportError:
-    Document = None
+from PyQt6.QtCore import Qt, pyqtSignal, QObject
 
 from src.plugins.base_plugin import BasePlugin
-
-# 尝试导入 openai，如果失败则提示安装
-try:
-    from openai import OpenAI
-except ImportError:
-    OpenAI = None
 
 
 class StreamWorkerSignals(QObject):
@@ -77,14 +42,70 @@ class StreamWorkerSignals(QObject):
     # 新增：用于单次调用的 UI 更新信号 (内容, 目标控件对象)
     oneshot_finished = pyqtSignal(str, object)
 
+
 class SpeechDraftPlugin(BasePlugin):
     def __init__(self):
         super().__init__("讲话稿生成", "基于 AI 的讲话稿流式生成工具")
         self.reference_files = []
         self.config_file = self._get_config_path()
+        # 延迟导入依赖
+        self._lazy_import_dependencies()
         self._setup_ui()
         self._load_config()
+    
+    def _lazy_import_dependencies(self):
+        """延迟导入第三方依赖，避免模块顶部导入在 PyInstaller 环境下的问题"""
+        global requests, OpenAI, Document
         
+        # 导入 requests
+        if requests is None:
+            try:
+                import requests as req_module
+                requests = req_module
+            except ImportError as e:
+                logger.error(f"requests 导入失败: {e}")
+        
+        # 导入 OpenAI
+        if OpenAI is None:
+            try:
+                from openai import OpenAI as OpenAIClient
+                OpenAI = OpenAIClient
+            except ImportError as e:
+                logger.error(f"OpenAI 导入失败: {e}")
+        
+        # 导入 Document (python-docx)
+        if Document is None:
+            try:
+                from docx import Document as DocxDocument
+                Document = DocxDocument
+            except ImportError as e:
+                logger.error(f"Document 导入失败: {e}")
+           
+    def _check_dependencies(self) -> bool:
+        """检查依赖是否可用，返回是否可以继续"""
+        missing_deps = []
+           
+        # 检查必需的依赖
+        if OpenAI is None:
+            missing_deps.append("openai")
+        if requests is None:
+            missing_deps.append("requests")
+        if Document is None:
+            missing_deps.append("python-docx")
+           
+        if missing_deps:
+            deps_str = "、".join(missing_deps)
+            QMessageBox.warning(
+                self,
+                "缺少依赖库",
+                f"此功能需要以下依赖库：\n\n{deps_str}\n\n"
+                "请使用“文件 → 恢复插件”功能导入完整的插件包（包含依赖）。\n\n"
+                "插件开发者可使用“文件 → 备份插件”功能打包插件和依赖。"
+            )
+            return False
+           
+        return True
+    
     def _get_config_path(self):
         """获取配置文件路径"""
         from src.utils.path_utils import get_data_directory
@@ -575,6 +596,10 @@ class SpeechDraftPlugin(BasePlugin):
             QMessageBox.warning(self, "提醒", "请先输入文章标题")
             return
         
+        # 检查依赖
+        if not self._check_dependencies():
+            return
+        
         sys_p = self.kw_sys_input.toPlainText().strip()
         user_p = self.kw_user_input.toPlainText().strip().format(title=title)
         self._call_ai_oneshot(sys_p, user_p, self.kw_input)
@@ -583,6 +608,10 @@ class SpeechDraftPlugin(BasePlugin):
         title = self.title_input.text().strip()
         if not title:
             QMessageBox.warning(self, "提醒", "请先输入文章标题")
+            return
+        
+        # 检查依赖
+        if not self._check_dependencies():
             return
         
         keywords = self.kw_input.text().strip()
@@ -611,10 +640,6 @@ class SpeechDraftPlugin(BasePlugin):
         if not api_key:
             QMessageBox.warning(self, "提醒", "请先在高级配置中设置 API Key")
             self.settings_group.setVisible(True)
-            return
-
-        if OpenAI is None:
-            QMessageBox.critical(self, "错误", "未安装 openai 库，请在应用根目录下运行 'pip install -t lib openai'")
             return
 
         def task():
@@ -651,9 +676,9 @@ class SpeechDraftPlugin(BasePlugin):
             QMessageBox.warning(self, "提醒", "请先在设置中配置 API Key")
             self.settings_group.setVisible(True)
             return
-
-        if OpenAI is None:
-            QMessageBox.critical(self, "错误", "未安装 openai 库，请运行 'pip install -t lib openai'")
+        
+        # 检查依赖
+        if not self._check_dependencies():
             return
 
         # 禁用按钮

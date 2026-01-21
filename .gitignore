@@ -3,6 +3,7 @@ venv/
 env/
 .env/
 .venv/
+lib/
 
 # IDE配置
 .idea/

@@ -106,13 +106,15 @@ else
         echo "正在准备构建输出目录 (dist) 的依赖文件..."
         
         # 1. 创建必要的运行目录
-        mkdir -p dist/data dist/log dist/plugins dist/translations
+        mkdir -p dist/data dist/log dist/plugins dist/translations dist/lib
         
-        # 2. 拷贝内置插件 (如果不包含在可执行文件中)
-        if [ -d "plugins" ]; then
-            echo "正在拷贝插件到 dist/plugins..."
-            cp -r plugins/* dist/plugins/ 2>/dev/null || true
-        fi
+       # 2. 拷贝内置插件 (如果不包含在可执行文件中)
+        # 注意：测试阶段注释掉，让所有插件通过"导入插件"功能安装
+        # 发布时可以取消注释，将内置插件复制到 dist/plugins/
+        # if [ -d "plugins" ]; then
+        #     echo "正在拷贝插件到 dist/plugins..."
+        #     cp -r plugins/* dist/plugins/ 2>/dev/null || true
+        # fi
 
         # 3. 处理翻译文件 (特别是 macOS 和通用环境)
         if [[ -d "translations" ]]; then
@@ -139,9 +141,15 @@ else
         if [[ ( "$PLATFORM" == "macos" || "$PLATFORM" == "all" ) && -d "dist/X-Tool.app" ]]; then
             echo "检测到 macOS .app，正在同步资源到 Contents/Resources..."
             RES_DIR="dist/X-Tool.app/Contents/Resources"
-            mkdir -p "$RES_DIR/data" "$RES_DIR/log" "$RES_DIR/plugins" "$RES_DIR/translations"
+            mkdir -p "$RES_DIR/data" "$RES_DIR/log" "$RES_DIR/translations"
+            # 注意：不再将 plugins 复制到 .app 内部，让应用从外部 dist/plugins/ 加载
+            # mkdir -p "$RES_DIR/plugins"
             cp -r dist/translations/* "$RES_DIR/translations/" 2>/dev/null || true
-            cp -r dist/plugins/* "$RES_DIR/plugins/" 2>/dev/null || true
+            # cp -r dist/plugins/* "$RES_DIR/plugins/" 2>/dev/null || true
+            
+            # 在 .app 同级创建 lib 目录（用于插件按需安装依赖）
+            echo "在 .app 同级创建 lib 目录..."
+            mkdir -p "dist/lib"
         fi
         
         echo "输出目录准备就绪。"
