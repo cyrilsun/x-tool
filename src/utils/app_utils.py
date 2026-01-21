@@ -32,6 +32,21 @@ def show_about_dialog(parent):
     close_btn = QPushButton("确定")
     close_btn.setFont(QFont("Microsoft YaHei", 12))
     close_btn.setFixedWidth(100)
+    close_btn.setStyleSheet("""
+        QPushButton {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px;
+        }
+        QPushButton:hover {
+            background-color: #2980b9;
+        }
+        QPushButton:pressed {
+            background-color: #1e3799;
+        }
+    """)
     close_btn.clicked.connect(dialog.accept)
 
     btn_layout = QHBoxLayout()
