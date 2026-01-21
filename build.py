@@ -174,6 +174,7 @@ def build_windows(args):
         "--hidden-import=urllib",
         "--hidden-import=urllib.parse",
         "--hidden-import=urllib.request",
+        "--icon=icon.ico",  # Windows 图标
     ]
     
     for module in exclude_modules:
@@ -244,6 +245,7 @@ def build_linux(args):
         "--hidden-import=urllib",
         "--hidden-import=urllib.parse",
         "--hidden-import=urllib.request",
+        "--icon=icon.png",  # Linux 图标（支持 PNG）
     ]
     
     for module in exclude_modules:
