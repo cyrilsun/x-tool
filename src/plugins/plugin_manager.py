@@ -915,7 +915,7 @@ def _import_xpkg_plugin(window, file_path):
             msg_text = f"插件 '{plugin_name}' 已成功导入。"
             info_parts = []
             if has_lib:
-                info_parts.append("包含 lib 依赖")
+                info_parts.append("包含依赖")
             if has_data:
                 info_parts.append("包含插件数据")
             if info_parts:

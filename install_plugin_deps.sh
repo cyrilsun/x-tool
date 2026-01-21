@@ -28,32 +28,34 @@ else
     echo -e "${YELLOW}ℹ️  lib 目录已存在: $LIB_DIR${NC}"
 fi
 
-# 定义插件依赖列表
-declare -A PLUGIN_DEPS=(
-    ["speech_draft_plugin"]="openai requests python-docx"
-    # 如果有其他插件，可以继续添加
-    # ["other_plugin"]="dependency1 dependency2"
-)
+# 检查是否支持关联数组 (Bash 4.0+)
+# 如果不支持，则使用普通的数组和逻辑
+SUPPORT_ASSOC_ARRAY=false
+if declare -A TEST_ARRAY 2>/dev/null; then
+    SUPPORT_ASSOC_ARRAY=true
+fi
 
-# 询问是否安装特定插件的依赖
-echo ""
-echo -e "${YELLOW}可用插件及其依赖：${NC}"
-for plugin in "${!PLUGIN_DEPS[@]}"; do
-    echo -e "  ${GREEN}${plugin}${NC}: ${PLUGIN_DEPS[$plugin]}"
-done
-echo ""
+# 定义插件依赖 (兼容模式)
+SPEECH_DRAFT_DEPS="openai requests python-docx"
 
 # 安装函数
 install_dependencies() {
     local deps=$1
     echo -e "${BLUE}开始安装依赖...${NC}"
     
+    # 检查 Python 环境
+    local python_cmd="python3"
+    if ! command -v $python_cmd &> /dev/null; then
+        echo -e "${RED}❌ 未找到 python3 命令${NC}"
+        return 1
+    fi
+
     for dep in $deps; do
         echo ""
         echo -e "${YELLOW}正在安装: $dep${NC}"
         
-        # 使用 pip install -t 安装到 lib 目录
-        if pip install -t "$LIB_DIR" "$dep" --upgrade; then
+        # 使用 python3 -m pip install -t 安装到 lib 目录
+        if $python_cmd -m pip install -t "$LIB_DIR" "$dep" --upgrade; then
             echo -e "${GREEN}✅ $dep 安装成功${NC}"
         else
             echo -e "${RED}❌ $dep 安装失败${NC}"
@@ -75,49 +77,21 @@ read -p "请输入选项 [1]: " choice
 choice=${choice:-1}
 
 case $choice in
-    1)
+    1|2)
         echo ""
         echo -e "${BLUE}========================================${NC}"
-        echo -e "${BLUE}  安装所有插件依赖${NC}"
+        echo -e "${BLUE}  安装依赖中...${NC}"
         echo -e "${BLUE}========================================${NC}"
         
-        all_deps=""
-        for deps in "${PLUGIN_DEPS[@]}"; do
-            all_deps="$all_deps $deps"
-        done
-        
-        # 去重
-        all_deps=$(echo $all_deps | tr ' ' '\n' | sort -u | tr '\n' ' ')
-        
-        if install_dependencies "$all_deps"; then
+        if install_dependencies "$SPEECH_DRAFT_DEPS"; then
             echo ""
             echo -e "${GREEN}========================================${NC}"
-            echo -e "${GREEN}  ✅ 所有依赖安装完成！${NC}"
+            echo -e "${GREEN}  ✅ 依赖安装完成！${NC}"
             echo -e "${GREEN}========================================${NC}"
         else
             echo ""
             echo -e "${RED}========================================${NC}"
-            echo -e "${RED}  ❌ 部分依赖安装失败${NC}"
-            echo -e "${RED}========================================${NC}"
-            exit 1
-        fi
-        ;;
-        
-    2)
-        echo ""
-        echo -e "${BLUE}========================================${NC}"
-        echo -e "${BLUE}  安装 speech_draft_plugin 依赖${NC}"
-        echo -e "${BLUE}========================================${NC}"
-        
-        if install_dependencies "${PLUGIN_DEPS[speech_draft_plugin]}"; then
-            echo ""
-            echo -e "${GREEN}========================================${NC}"
-            echo -e "${GREEN}  ✅ speech_draft_plugin 依赖安装完成！${NC}"
-            echo -e "${GREEN}========================================${NC}"
-        else
-            echo ""
-            echo -e "${RED}========================================${NC}"
-            echo -e "${RED}  ❌ 部分依赖安装失败${NC}"
+            echo -e "${RED}  ❌ 依赖安装失败${NC}"
             echo -e "${RED}========================================${NC}"
             exit 1
         fi
