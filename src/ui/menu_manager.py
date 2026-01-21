@@ -122,6 +122,12 @@ class MenuManager:
         create_folder_action = menu.addAction("创建文件夹")
         create_folder_action.triggered.connect(lambda: self.main_window.folder_manager.create_folder())
 
+        menu.addSeparator()
+
+        # 导入插件
+        import_plugin_action = menu.addAction("导入插件")
+        import_plugin_action.triggered.connect(lambda: import_plugin(self.main_window))
+
         menu.exec(self.main_window.tool_list_widget.mapToGlobal(position))
 
     def _show_folder_context_menu(self, position, folder_item):

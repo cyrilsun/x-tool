@@ -57,29 +57,35 @@ class SpeechDraftPlugin(BasePlugin):
         """延迟导入第三方依赖，避免模块顶部导入在 PyInstaller 环境下的问题"""
         global requests, OpenAI, Document
         
+        logger.info("[插件延迟导入] 开始导入依赖...")
+        logger.info(f"[插件延迟导入] sys.path 前3项: {sys.path[:3]}")
+        
         # 导入 requests
         if requests is None:
             try:
                 import requests as req_module
                 requests = req_module
+                logger.info("[插件延迟导入] ✅ requests 导入成功")
             except ImportError as e:
-                logger.error(f"requests 导入失败: {e}")
+                logger.error(f"[插件延迟导入] ❌ requests 导入失败: {e}")
         
         # 导入 OpenAI
         if OpenAI is None:
             try:
                 from openai import OpenAI as OpenAIClient
                 OpenAI = OpenAIClient
+                logger.info("[插件延迟导入] ✅ OpenAI 导入成功")
             except ImportError as e:
-                logger.error(f"OpenAI 导入失败: {e}")
+                logger.error(f"[插件延迟导入] ❌ OpenAI 导入失败: {e}")
         
         # 导入 Document (python-docx)
         if Document is None:
             try:
                 from docx import Document as DocxDocument
                 Document = DocxDocument
+                logger.info("[插件延迟导入] ✅ Document 导入成功")
             except ImportError as e:
-                logger.error(f"Document 导入失败: {e}")
+                logger.error(f"[插件延迟导入] ❌ Document 导入失败: {e}")
            
     def _check_dependencies(self) -> bool:
         """检查依赖是否可用，返回是否可以继续"""
@@ -94,6 +100,26 @@ class SpeechDraftPlugin(BasePlugin):
             missing_deps.append("python-docx")
            
         if missing_deps:
+            # 记录详细的调试信息
+            logger.error(f"[插件依赖检查] 缺少依赖: {missing_deps}")
+            logger.error(f"[插件依赖检查] sys.path 前3项: {sys.path[:3]}")
+            
+            # 检查 lib 目录
+            try:
+                from src.utils.path_utils import get_lib_directory
+                lib_dir = get_lib_directory()
+                logger.error(f"[插件依赖检查] lib 目录: {lib_dir}")
+                logger.error(f"[插件依赖检查] lib 目录存在: {os.path.exists(lib_dir)}")
+                if os.path.exists(lib_dir):
+                    lib_contents = os.listdir(lib_dir)
+                    logger.error(f"[插件依赖检查] lib 目录内容（前10个）: {lib_contents[:10]}")
+                    # 检查特定依赖是否存在
+                    for dep in missing_deps:
+                        dep_dir = os.path.join(lib_dir, dep)
+                        logger.error(f"[插件依赖检查] {dep} 目录存在: {os.path.exists(dep_dir)}")
+            except Exception as e:
+                logger.error(f"[插件依赖检查] 获取 lib 目录失败: {e}")
+            
             deps_str = "、".join(missing_deps)
             QMessageBox.warning(
                 self,
@@ -851,7 +877,14 @@ class SpeechDraftPlugin(BasePlugin):
         return self
 
     def on_activate(self):
-        logger.info("讲话稿插件被激活")
+        logger.info("讲话稿插件被激活 - v2.1 (延迟导入版本)")  # 版本标记
+        logger.info(f"[插件激活] 插件文件路径: {__file__}")
+        # 诊断：检查依赖加载状态
+        logger.info(f"[插件激活] OpenAI = {OpenAI is not None}")
+        logger.info(f"[插件激活] requests = {requests is not None}")
+        logger.info(f"[插件激活] Document = {Document is not None}")
+        if OpenAI is None or requests is None or Document is None:
+            logger.warning("插件激活时发现缺少依赖，这是正常的，将在运行时提示用户")
         pass
 
     def on_deactivate(self):
