@@ -36,7 +36,8 @@ if declare -A TEST_ARRAY 2>/dev/null; then
 fi
 
 # 定义插件依赖 (兼容模式)
-SPEECH_DRAFT_DEPS="openai requests python-docx"
+#SPEECH_DRAFT_DEPS="openai requests python-docx" # openai speech_draft_plugin
+SPEECH_DRAFT_DEPS="requests"
 
 # 安装函数
 install_dependencies() {
