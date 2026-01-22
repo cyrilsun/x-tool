@@ -39,8 +39,6 @@ class StreamWorkerSignals(QObject):
     finished = pyqtSignal(str)
     error = pyqtSignal(str)
     started = pyqtSignal()
-    # 新增：用于单次调用的 UI 更新信号 (内容, 目标控件对象)
-    oneshot_finished = pyqtSignal(str, object)
 
 
 class SpeechDraftPlugin(BasePlugin):
@@ -50,6 +48,11 @@ class SpeechDraftPlugin(BasePlugin):
         self.config_file = self._get_config_path()
         # 延迟导入依赖
         self._lazy_import_dependencies()
+            
+        # 初始化信号对象（用于关键词和内容概述的流式生成）
+        self.kw_signals = StreamWorkerSignals()
+        self.summary_signals = StreamWorkerSignals()
+            
         self._setup_ui()
         self._load_config()
     
@@ -205,9 +208,14 @@ class SpeechDraftPlugin(BasePlugin):
             logger.error(f"保存 AI 配置失败: {e}")
 
     def _setup_ui(self):
-        # 初始化信号对象
-        self.one_shot_signals = StreamWorkerSignals()
-        self.one_shot_signals.oneshot_finished.connect(self._on_oneshot_finished)
+        # 连接信号（用于关键词和内容概述的流式生成）
+        self.kw_signals.chunk_received.connect(self._on_kw_chunk)
+        self.kw_signals.finished.connect(self._on_kw_finished)
+        self.kw_signals.error.connect(self._on_stream_error)
+        
+        self.summary_signals.chunk_received.connect(self._on_summary_chunk)
+        self.summary_signals.finished.connect(self._on_summary_finished)
+        self.summary_signals.error.connect(self._on_stream_error)
         
         # 创建外层布局以包含滚动区域
         outer_layout = QVBoxLayout(self)
@@ -626,9 +634,27 @@ class SpeechDraftPlugin(BasePlugin):
         if not self._check_dependencies():
             return
         
+        # 检查 API Key
+        api_key = self.api_key_input.text().strip()
+        if not api_key:
+            QMessageBox.warning(self, "提醒", "请先在高级配置中设置 API Key")
+            self.settings_group.setVisible(True)
+            return
+        
+        # 清空关键词输入框并禁用按钮
+        self.kw_input.clear()
+        self.ai_kw_btn.setEnabled(False)
+        self.ai_kw_btn.setText("生成中...")
+        
         sys_p = self.kw_sys_input.toPlainText().strip()
         user_p = self.kw_user_input.toPlainText().strip().format(title=title)
-        self._call_ai_oneshot(sys_p, user_p, self.kw_input)
+        
+        # 启动流式生成
+        threading.Thread(
+            target=self._stream_to_target,
+            args=(sys_p, user_p, self.kw_signals, "keyword"),
+            daemon=True
+        ).start()
 
     def _ai_generate_summary(self):
         title = self.title_input.text().strip()
@@ -640,6 +666,18 @@ class SpeechDraftPlugin(BasePlugin):
         if not self._check_dependencies():
             return
         
+        # 检查 API Key
+        api_key = self.api_key_input.text().strip()
+        if not api_key:
+            QMessageBox.warning(self, "提醒", "请先在高级配置中设置 API Key")
+            self.settings_group.setVisible(True)
+            return
+        
+        # 清空内容输入框并禁用按钮
+        self.content_input.clear()
+        self.ai_content_btn.setEnabled(False)
+        self.ai_content_btn.setText("生成中...")
+        
         keywords = self.kw_input.text().strip()
         sys_p = self.sum_sys_input.toPlainText().strip()
         # 传入 title 和 keywords，同时兼容 keyword 拼写
@@ -648,48 +686,76 @@ class SpeechDraftPlugin(BasePlugin):
             keywords=keywords or "无",
             keyword=keywords or "无"
         )
-        self._call_ai_oneshot(sys_p, user_p, self.content_input)
+        
+        # 启动流式生成
+        threading.Thread(
+            target=self._stream_to_target,
+            args=(sys_p, user_p, self.summary_signals, "summary"),
+            daemon=True
+        ).start()
 
-    def _on_oneshot_finished(self, content, target_widget):
-        """安全地在主线程更新 UI"""
-        if isinstance(target_widget, QLineEdit):
-            target_widget.setText(content)
-        elif isinstance(target_widget, QTextEdit):
-            target_widget.setPlainText(content)
-
-    def _call_ai_oneshot(self, system_prompt, user_prompt, target_widget):
-        """单次非流式调用 AI (用于生成关键词和概述)"""
+    def _stream_to_target(self, system_prompt, user_prompt, signals, target_type):
+        """流式生成内容到指定目标（关键词或内容概述）"""
         api_key = self.api_key_input.text().strip()
         api_base = self.api_base_input.text().strip()
         model = self.model_input.text().strip()
         
-        if not api_key:
-            QMessageBox.warning(self, "提醒", "请先在高级配置中设置 API Key")
-            self.settings_group.setVisible(True)
-            return
-
-        def task():
-            try:
-                logger.info(f"AI单次调用提示词: \nSys: {system_prompt}\nUser: {user_prompt[:500]}")
-                client = OpenAI(api_key=api_key, base_url=api_base)
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=float(self.temp_input.text().strip()) if self.temp_input.text().strip() else 0.7,
-                    max_tokens=int(self.max_tokens_input.text().strip()) if self.max_tokens_input.text().strip() else 1000,
-                    stream=False
-                )
-                
-                content = response.choices[0].message.content.strip()
-                # 通过信号发送结果，而不是直接操作控件
-                self.one_shot_signals.oneshot_finished.emit(content, target_widget)
-            except Exception as e:
-                logger.error(f"AI 调用异常: {e}")
-
-        threading.Thread(target=task, daemon=True).start()
+        logger.info(f"AI流式生成[{target_type}] - 系统提示词: {system_prompt}")
+        logger.info(f"AI流式生成[{target_type}] - 用户提示词: {user_prompt[:500]}")
+        
+        try:
+            client = OpenAI(api_key=api_key, base_url=api_base)
+            
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=float(self.temp_input.text().strip()) if self.temp_input.text().strip() else 0.7,
+                max_tokens=int(self.max_tokens_input.text().strip()) if self.max_tokens_input.text().strip() else 1000,
+                stream=True
+            )
+            
+            for chunk in resp:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    signals.chunk_received.emit(content)
+            
+            signals.finished.emit("")
+            
+        except Exception as e:
+            logger.error(f"AI 流式生成[{target_type}] 失败: {e}")
+            signals.error.emit(str(e))
+    
+    def _on_kw_chunk(self, chunk):
+        """关键词生成 - 接收分块"""
+        self.kw_input.setText(self.kw_input.text() + chunk)
+    
+    def _on_kw_finished(self, _):
+        """关键词生成 - 完成"""
+        self.ai_kw_btn.setEnabled(True)
+        self.ai_kw_btn.setText("AI写作")
+    
+    def _on_summary_chunk(self, chunk):
+        """内容概述生成 - 接收分块"""
+        self.content_input.insertPlainText(chunk)
+        # 自动滚动到底部
+        self.content_input.verticalScrollBar().setValue(self.content_input.verticalScrollBar().maximum())
+    
+    def _on_summary_finished(self, _):
+        """内容概述生成 - 完成"""
+        self.ai_content_btn.setEnabled(True)
+        self.ai_content_btn.setText("AI写内容概述")
+    
+    def _on_stream_error(self, error_msg):
+        """处理流式生成错误"""
+        QMessageBox.critical(self, "错误", f"生成失败：{error_msg}")
+        # 恢复按钮状态
+        self.ai_kw_btn.setEnabled(True)
+        self.ai_kw_btn.setText("AI写作")
+        self.ai_content_btn.setEnabled(True)
+        self.ai_content_btn.setText("AI写内容概述")
 
     def _start_generation(self):
         title = self.title_input.text().strip()
@@ -721,11 +787,17 @@ class SpeechDraftPlugin(BasePlugin):
         content_summary = self.content_input.toPlainText().strip()
         search_results_str = "未开启联网搜索"
         
+        # 初始化信号对象
+        self.signals = StreamWorkerSignals()
+        self.signals.chunk_received.connect(self._on_chunk_received)
+        self.signals.finished.connect(self._on_finished)
+        self.signals.error.connect(self._on_error)
+        
         # 1. 如果开启了联网搜索
         if self.search_check.isChecked():
-            self.one_shot_signals.chunk_received.emit("> 正在提炼搜索意图并联网检索...\n")
+            self.signals.chunk_received.emit("> 正在提炼搜索意图并联网检索...\n")
             search_results_str = self._perform_online_search(title, keywords, content_summary)
-            self.one_shot_signals.chunk_received.emit("> 联网搜索完成，正在组织语言撰写全文...\n\n")
+            self.signals.chunk_received.emit("> 联网搜索完成，正在组织语言撰写全文...\n\n")
 
         # 2. 准备最终提示词
         files_str = f"已上传 {len(self.reference_files)} 个相关文档" if self.reference_files else "无"
@@ -744,11 +816,6 @@ class SpeechDraftPlugin(BasePlugin):
         )
 
         # 3. 启动流式生成
-        self.signals = StreamWorkerSignals()
-        self.signals.chunk_received.connect(self._on_chunk_received)
-        self.signals.finished.connect(self._on_finished)
-        self.signals.error.connect(self._on_error)
-        
         self._stream_task(system_prompt, user_prompt)
 
     def _perform_online_search(self, title, keywords, summary) -> str:
