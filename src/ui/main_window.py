@@ -235,6 +235,7 @@ class MainWindow(QMainWindow):
         self.tool_list_widget.currentItemChanged.connect(self.tool_manager.on_tool_selected)
         self.tool_list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tool_list_widget.customContextMenuRequested.connect(self.menu_manager.show_context_menu)
+        self.tool_list_widget.itemExpanded.connect(self.on_item_expanded)
         self.search_input.textChanged.connect(self.filter_plugins)
 
         # 初始化界面
@@ -242,6 +243,44 @@ class MainWindow(QMainWindow):
         self.welcome_page_manager.init_welcome_page()
         self.menu_manager.create_menus()
 
+
+    def on_item_expanded(self, expanded_item):
+        """当文件夹展开时，收起其它所有文件夹（手风琴模式）"""
+        # 如果正在搜索，不执行手风琴模式，允许展开多个搜索结果
+        if self.search_input.text().strip():
+            return
+            
+        self.tool_list_widget.blockSignals(True)
+        
+        # 获取展开项的所有祖先，祖先不能收起
+        ancestors = []
+        curr = expanded_item.parent()
+        while curr:
+            ancestors.append(curr)
+            curr = curr.parent()
+            
+        def traverse_and_collapse(parent_item=None):
+            if parent_item is None:
+                # 遍历顶层项
+                for i in range(self.tool_list_widget.topLevelItemCount()):
+                    item = self.tool_list_widget.topLevelItem(i)
+                    if item.childCount() > 0:  # 只处理文件夹
+                        if item != expanded_item and item not in ancestors:
+                            item.setExpanded(False)
+                        traverse_and_collapse(item)
+            else:
+                # 遍历子项
+                for i in range(parent_item.childCount()):
+                    item = parent_item.child(i)
+                    if item.childCount() > 0:  # 只处理文件夹
+                        if item != expanded_item and item not in ancestors:
+                            item.setExpanded(False)
+                        traverse_and_collapse(item)
+
+        try:
+            traverse_and_collapse()
+        finally:
+            self.tool_list_widget.blockSignals(False)
 
     def filter_plugins(self, text):
         """模糊搜索过滤插件"""
