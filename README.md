@@ -28,7 +28,7 @@ git clone https://github.com/cyrilsun/x-tool.git
 cd x-tool
 
 # 创建并激活虚拟环境
-python3 -m venv venv
+python -m venv venv
 source venv/bin/activate  # macOS/Linux
 # venv\Scripts\activate  # Windows
 ```
