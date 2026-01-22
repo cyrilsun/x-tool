@@ -48,6 +48,9 @@ class SpeechDraftPlugin(BasePlugin):
         self.config_file = self._get_config_path()
         # 延迟导入依赖
         self._lazy_import_dependencies()
+        
+        # 记录上次保存的目录，默认为用户主目录
+        self.last_save_dir = os.path.expanduser("~")
             
         # 初始化信号对象（用于关键词和内容概述的流式生成）
         self.kw_signals = StreamWorkerSignals()
@@ -139,7 +142,8 @@ class SpeechDraftPlugin(BasePlugin):
         """获取配置文件路径"""
         from src.utils.path_utils import get_data_directory
         data_dir = get_data_directory()
-        config_dir = os.path.join(data_dir, "speech_draft")
+        # 统一规范：使用插件文件名作为配置目录，与插件导出/导入逻辑保持一致
+        config_dir = os.path.join(data_dir, "speech_draft_plugin")
         if not os.path.exists(config_dir):
             os.makedirs(config_dir, exist_ok=True)
         return os.path.join(config_dir, "ai_config.json")
@@ -588,12 +592,19 @@ class SpeechDraftPlugin(BasePlugin):
             QMessageBox.critical(self, "错误", "未安装 python-docx 库，请运行 'pip install -t lib python-docx'")
             return
 
+        # 准备默认文件名
+        default_filename = f"{self.title_input.text().strip() or '未命名讲话稿'}.docx"
+        default_path = os.path.join(self.last_save_dir, default_filename)
+        
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "导出讲话稿", f"{self.title_input.text().strip() or '未命名讲话稿'}.docx", "Word Documents (*.docx)"
+            self, "导出讲话稿", default_path, "Word Documents (*.docx)"
         )
 
         if file_path:
             try:
+                # 记住这次保存的目录
+                self.last_save_dir = os.path.dirname(file_path)
+                
                 doc = Document()
                 title = self.title_input.text().strip()
                 if title:
@@ -619,8 +630,12 @@ class SpeechDraftPlugin(BasePlugin):
         self.content_count_label.setText(f"{count} / 1000")
 
     def _upload_files(self):
-        files, _ = QFileDialog.getOpenFileNames(self, "选择参考文档", "", "Documents (*.pdf *.docx *.txt *.md)")
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "选择参考文档", self.last_save_dir, "Documents (*.pdf *.docx *.txt *.md)"
+        )
         if files:
+            # 记住这次选择的目录
+            self.last_save_dir = os.path.dirname(files[0])
             self.reference_files = files
             self.file_list_label.setText(f"已上传 {len(files)} 个文件: " + ", ".join([os.path.basename(f) for f in files]))
 

@@ -335,9 +335,11 @@ def backup_plugins(window):
         # 获取选择的备份目录
         backup_dir = file_dialog.selectedFiles()[0]
         
-        # 获取插件目录和 lib 目录
+        # 获取插件目录、lib 目录和 data 目录
         plugin_dir = get_plugin_directory()
         lib_dir = get_lib_directory()
+        from src.utils.path_utils import get_data_directory
+        data_dir = get_data_directory()
         
         try:
             # 创建插件备份目录
@@ -349,6 +351,11 @@ def backup_plugins(window):
             lib_backup_dir = os.path.join(backup_dir, "lib")
             if not os.path.exists(lib_backup_dir):
                 os.makedirs(lib_backup_dir)
+            
+            # 创建 data 备份目录
+            data_backup_dir = os.path.join(backup_dir, "data")
+            if not os.path.exists(data_backup_dir):
+                os.makedirs(data_backup_dir)
             
             # 复制所有插件文件
             plugin_files_copied = 0
@@ -375,6 +382,22 @@ def backup_plugins(window):
                         shutil.copy2(source_path, dest_path)
                     lib_files_copied += 1
             
+            # 复制 data 目录下的配置数据
+            data_dirs_copied = 0
+            if os.path.exists(data_dir):
+                for item in os.listdir(data_dir):
+                    # 跳过非插件目录（如数据库文件）
+                    if item.endswith('.db') or item.startswith('.'):
+                        continue
+                    source_path = os.path.join(data_dir, item)
+                    if os.path.isdir(source_path):
+                        dest_path = os.path.join(data_backup_dir, item)
+                        if os.path.exists(dest_path):
+                            shutil.rmtree(dest_path)
+                        shutil.copytree(source_path, dest_path)
+                        data_dirs_copied += 1
+                        logger.info(f"备份配置目录: {item}")
+            
             # 导出数据库关联数据
             with Database() as db:
                 # 导出插件文件夹
@@ -395,7 +418,7 @@ def backup_plugins(window):
             
             msg_box = QMessageBox(window)
             msg_box.setWindowTitle("备份成功")
-            msg_box.setText(f"成功备份 {plugin_files_copied} 个插件文件、{lib_files_copied} 个依赖项和关联数据。")
+            msg_box.setText(f"成功备份 {plugin_files_copied} 个插件文件、{lib_files_copied} 个依赖项、{data_dirs_copied} 个配置目录和关联数据。")
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
@@ -435,9 +458,11 @@ def restore_plugins(window):
             msg_box.exec()
             return
         
-        # 获取插件目录和 lib 目录
+        # 获取插件目录、lib 目录和 data 目录
         plugin_dir = get_plugin_directory()
         lib_dir = get_lib_directory()
+        from src.utils.path_utils import get_data_directory
+        data_dir = get_data_directory()
         
         try:
             # 复制所有插件文件
@@ -487,6 +512,20 @@ def restore_plugins(window):
                     else:
                         shutil.copy2(source_path, dest_path)
                     lib_files_restored += 1
+            
+            # 恢复 data 目录下的配置数据
+            data_backup_dir = os.path.join(backup_dir, "data")
+            data_dirs_restored = 0
+            if os.path.exists(data_backup_dir):
+                for item in os.listdir(data_backup_dir):
+                    source_path = os.path.join(data_backup_dir, item)
+                    if os.path.isdir(source_path):
+                        dest_path = os.path.join(data_dir, item)
+                        if os.path.exists(dest_path):
+                            shutil.rmtree(dest_path)
+                        shutil.copytree(source_path, dest_path)
+                        data_dirs_restored += 1
+                        logger.info(f"恢复配置目录: {item}")
             
             # 导入数据库关联数据
             with open(backup_data_path, "r", encoding="utf-8") as f:
@@ -558,7 +597,7 @@ def restore_plugins(window):
             
             msg_box = QMessageBox(window)
             msg_box.setWindowTitle("恢复成功")
-            msg_box.setText(f"成功恢复 {plugin_files_restored} 个插件文件、{lib_files_restored} 个依赖项和关联数据。")
+            msg_box.setText(f"成功恢复 {plugin_files_restored} 个插件文件、{lib_files_restored} 个依赖项、{data_dirs_restored} 个配置目录和关联数据。")
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
@@ -587,6 +626,11 @@ def export_single_plugin(window, plugin_name):
         file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         file_dialog.setNameFilter("插件包 (*.xpkg)")
         file_dialog.setDefaultSuffix("xpkg")
+        
+        # 设置默认目录为用户主目录
+        import os
+        default_dir = os.path.expanduser("~")
+        file_dialog.setDirectory(default_dir)
         
         # 设置默认文件名
         safe_plugin_name = plugin_name.replace(" ", "_").replace("/", "_")
@@ -646,12 +690,17 @@ def export_single_plugin(window, plugin_name):
             data_dir = get_data_directory()
             has_data = False
             
-            # 查找插件相关的数据目录（使用插件文件名）
+            # 统一规范：插件数据目录名 = file_name（插件文件名）
+            # 这样导出和导入时保持一致
             plugin_data_dir = os.path.join(data_dir, plugin_file_name)
+            
             if os.path.exists(plugin_data_dir) and os.path.isdir(plugin_data_dir):
+                logger.info(f"找到配置数据目录: {plugin_data_dir}")
                 data_temp_dir = os.path.join(temp_dir, "data")
                 shutil.copytree(plugin_data_dir, data_temp_dir)
                 has_data = True
+            else:
+                logger.info(f"未找到插件配置数据: {plugin_data_dir}")
             
             # 4. 生成 manifest.json
             manifest = {
@@ -682,9 +731,26 @@ def export_single_plugin(window, plugin_name):
             
             msg_box = QMessageBox(window)
             msg_box.setWindowTitle("导出成功")
-            msg_box.setText(f"插件 '{plugin_name}' 已成功导出至：\n{export_path}")
+            
+            # 构建详细信息
+            export_info = []
+            export_info.append(f"插件 '{plugin_name}' 已成功导出至：")
+            export_info.append(export_path)
+            export_info.append("")
+            export_info.append("导出内容：")
+            export_info.append("✓ 插件文件")
+            
             if has_lib:
-                msg_box.setInformativeText("包含 lib 依赖")
+                export_info.append("✓ 依赖库 (lib)")
+            else:
+                export_info.append("✗ 依赖库 (无)")
+            
+            if has_data:
+                export_info.append("✓ 配置数据 (data)")
+            else:
+                export_info.append("✗ 配置数据 (无)")
+            
+            msg_box.setText("\n".join(export_info))
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
