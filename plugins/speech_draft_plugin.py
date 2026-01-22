@@ -795,16 +795,21 @@ class SpeechDraftPlugin(BasePlugin):
         
         # 1. 如果开启了联网搜索
         if self.search_check.isChecked():
-            self.signals.chunk_received.emit("> 正在提炼搜索意图并联网检索...\n")
+            logger.info("> 正在提炼搜索意图并联网检索...")
             search_results_str = self._perform_online_search(title, keywords, content_summary)
-            self.signals.chunk_received.emit("> 联网搜索完成，正在组织语言撰写全文...\n\n")
+            logger.info("> 联网搜索完成，正在组织语言撰写全文...")
 
-        # 2. 准备最终提示词
-        files_str = f"已上传 {len(self.reference_files)} 个相关文档" if self.reference_files else "无"
+        # 2. 提取参考文档内容
+        if self.reference_files:
+            logger.info(f"> 正在提取 {len(self.reference_files)} 个参考文档的内容...")
+        files_content = self._extract_reference_files()
+        files_str = files_content if files_content else "无"
         
         system_prompt = self.gen_sys_input.toPlainText().strip()
         if self.search_check.isChecked():
             system_prompt += " 请重点参考提供的联网搜索实时信息。"
+        if files_content:
+            system_prompt += " 请参考提供的参考文档内容。"
 
         user_prompt_template = self.gen_user_input.toPlainText().strip()
         user_prompt = user_prompt_template.format(
@@ -816,6 +821,7 @@ class SpeechDraftPlugin(BasePlugin):
         )
 
         # 3. 启动流式生成
+        logger.info("> 开始流式生成讲话稿正文...")
         self._stream_task(system_prompt, user_prompt)
 
     def _perform_online_search(self, title, keywords, summary) -> str:
@@ -853,6 +859,75 @@ class SpeechDraftPlugin(BasePlugin):
             logger.error(f"联网搜索流程异常: {e}")
             return f"联网搜索发生异常: {str(e)}"
 
+    def _extract_reference_files(self) -> str:
+        """提取参考文档的文本内容"""
+        if not self.reference_files:
+            return ""
+        
+        all_content = []
+        
+        for file_path in self.reference_files:
+            try:
+                file_name = os.path.basename(file_path)
+                ext = os.path.splitext(file_path)[1].lower()
+                
+                content = ""
+                
+                if ext == '.txt' or ext == '.md':
+                    # 处理文本文件
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                
+                elif ext == '.docx':
+                    # 处理 Word 文档
+                    if Document is None:
+                        logger.warning(f"跳过 {file_name}：未安装 python-docx 库")
+                        continue
+                    try:
+                        doc = Document(file_path)
+                        paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+                        content = "\n".join(paragraphs)
+                    except Exception as e:
+                        logger.error(f"读取 DOCX 文件 {file_name} 失败: {e}")
+                        continue
+                
+                elif ext == '.pdf':
+                    # 处理 PDF 文件（需要 PyPDF2 或 pdfplumber）
+                    try:
+                        # 尝试导入 PyPDF2
+                        try:
+                            from PyPDF2 import PdfReader
+                            reader = PdfReader(file_path)
+                            pages_text = []
+                            for page in reader.pages:
+                                pages_text.append(page.extract_text())
+                            content = "\n".join(pages_text)
+                        except ImportError:
+                            logger.warning(f"跳过 {file_name}：未安装 PyPDF2 库")
+                            continue
+                    except Exception as e:
+                        logger.error(f"读取 PDF 文件 {file_name} 失败: {e}")
+                        continue
+                
+                else:
+                    logger.warning(f"不支持的文件类型: {file_name}")
+                    continue
+                
+                # 限制每个文档的长度，避免提示词过长
+                if content:
+                    content = content[:3000]  # 限制每个文档最多 3000 字符
+                    all_content.append(f"--- 来自文档 {file_name} ---\n{content}\n")
+                    logger.info(f"成功提取文档内容: {file_name}，长度: {len(content)} 字符")
+            
+            except Exception as e:
+                logger.error(f"处理文件 {file_path} 时发生错误: {e}")
+                continue
+        
+        if all_content:
+            return "\n\n".join(all_content)
+        else:
+            return ""
+    
     def _call_volcano_search(self, query, url, api_key, count=5) -> str:
         """调用火山搜索接口 (同步)"""
         if requests is None:
