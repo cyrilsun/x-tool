@@ -55,6 +55,9 @@ python main.py
 在 `plugins` 目录下创建独立的 `.py` 文件即可快速扩展。
 
 ### 基础结构示例：
+
+plugins目录下开发插件，每个插件为一个独立的.py文件。基础结构如下：
+
 ```python
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton
 from src.plugins.base_plugin import BasePlugin
@@ -91,5 +94,3 @@ class MyPlugin(BasePlugin):
 | ![主界面](bak/001.png) | ![插件导入](bak/002.png) |
 
 ---
-
-
