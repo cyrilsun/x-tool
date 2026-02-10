@@ -334,13 +334,11 @@ def backup_plugins(window):
     if file_dialog.exec():
         # 获取选择的备份目录
         backup_dir = file_dialog.selectedFiles()[0]
-
         # 获取插件目录、lib 目录和 data 目录
         plugin_dir = get_plugin_directory()
         lib_dir = get_lib_directory()
         from src.utils.path_utils import get_data_directory
         data_dir = get_data_directory()
-
         try:
             # 创建插件备份目录
             plugins_backup_dir = os.path.join(backup_dir, "plugins")
@@ -457,13 +455,11 @@ def restore_plugins(window):
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
             return
-
         # 获取插件目录、lib 目录和 data 目录
         plugin_dir = get_plugin_directory()
         lib_dir = get_lib_directory()
         from src.utils.path_utils import get_data_directory
         data_dir = get_data_directory()
-
         try:
             # 复制所有插件文件
             plugin_files_restored = 0

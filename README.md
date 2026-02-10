@@ -58,39 +58,32 @@ python main.py
 
 plugins目录下开发插件，每个插件为一个独立的.py文件。基础结构如下：
 
+### 插件开发
+plugins目录下开发插件，每个插件为一个独立的.py文件。基础结构如下：
 ```python
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton
 from src.plugins.base_plugin import BasePlugin
 
-class MyPlugin(BasePlugin):
+class MyNewPlugin(BasePlugin):
     def __init__(self):
-        # 参数：插件名称, 描述, 作者, 版本
-        super().__init__("我的插件", "插件功能描述")
+        super().__init__("我的新插件", "这是一个新插件的描述")
         self._setup_ui()
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        self.label = QLabel("这是我的新插件内容")
-        layout.addWidget(self.label)
+        label = QLabel("这是我的新插件内容")
+        layout.addWidget(label)
 
-        btn = QPushButton("点击测试")
-        btn.clicked.connect(self.on_click)
-        layout.addWidget(btn)
+        button = QPushButton("点击测试")
+        button.clicked.connect(self.on_button_clicked)
+        layout.addWidget(button)
 
-    def on_click(self):
-        self.label.setText("按钮已被点击！")
+    def on_button_clicked(self):
+        print("插件按钮被点击了！")
+
+    def get_widget(self) -> "MyNewPlugin":
+        return self
 
     def on_activate(self):
-        print("插件已激活")
-
-    def on_deactivate(self):
-        print("插件已停用")
+        print("我的新插件被激活了！")
 ```
-
-## 📸 软件截图
-
-| 主界面 | 插件导入 |
-| :---: | :---: |
-| ![主界面](bak/001.png) | ![插件导入](bak/002.png) |
-
----

@@ -33,7 +33,8 @@ class FolderManager:
             "folder_id": folder_id  # 直接将folder_id存储在UserRole中
         })
 
-        folder_item.setExpanded(True)
+        # 默认收起文件夹
+        folder_item.setExpanded(False)
         return folder_item
 
     def create_folder(self, parent_item=None):
