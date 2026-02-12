@@ -305,7 +305,31 @@ def main():
         print("\n正在执行后置处理（拷贝外部文件夹）...")
         dist_dir = "dist"
         folders_to_copy = ["plugins"]  # 移除 lib，由插件按需下载依赖
-        
+
+        # 复制图标文件
+        icon_files = []
+        if sys.platform == 'win32' or args.platform in ['windows', 'all']:
+            icon_files.append('icon.ico')
+        if sys.platform == 'darwin' or args.platform in ['macos', 'all']:
+            icon_files.append('icon.icns')
+        if sys.platform == 'linux' or args.platform in ['linux', 'all']:
+            icon_files.append('icon.png')
+
+        for icon_file in icon_files:
+            src_icon = icon_file
+            # Windows/Linux: 复制到 dist/X-Tool/
+            # macOS: 复制到 dist/
+            if sys.platform == 'darwin' and os.path.exists(os.path.join(dist_dir, "X-Tool.app")):
+                target_icon = os.path.join(dist_dir, icon_file)
+            elif os.path.exists(os.path.join(dist_dir, "X-Tool")):
+                target_icon = os.path.join(dist_dir, "X-Tool", icon_file)
+            else:
+                target_icon = os.path.join(dist_dir, icon_file)
+
+            if os.path.exists(src_icon):
+                shutil.copy2(src_icon, target_icon)
+                print(f"✅ 已复制图标: {src_icon} -> {target_icon}")
+
         for folder in folders_to_copy:
             src_path = folder
             # macOS .app 模式，文件夹应放在 .app 旁边

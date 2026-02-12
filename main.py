@@ -51,7 +51,30 @@ if __name__ == "__main__":
     
     # 设置翻译功能
     setup_translation(app)
-    
+
+    # 设置应用程序图标（支持 Windows/macOS/Linux）
+    icon_path = None
+    if getattr(sys, 'frozen', False):
+        # 打包后的环境，查找图标文件
+        if sys.platform == 'win32':
+            icon_path = os.path.join(root_dir, 'icon.ico')
+        elif sys.platform == 'darwin':
+            icon_path = os.path.join(root_dir, 'icon.icns')
+        else:
+            icon_path = os.path.join(root_dir, 'icon.png')
+    else:
+        # 开发环境
+        if sys.platform == 'win32':
+            icon_path = os.path.join(current_dir, 'icon.ico')
+        elif sys.platform == 'darwin':
+            icon_path = os.path.join(current_dir, 'icon.icns')
+        else:
+            icon_path = os.path.join(current_dir, 'icon.png')
+
+    if icon_path and os.path.exists(icon_path):
+        from PyQt6.QtGui import QIcon
+        app.setWindowIcon(QIcon(icon_path))
+
     window = MainWindow()
     window.setWindowTitle(f"X-Tool v{VERSION}")
     
