@@ -55,7 +55,7 @@ def init_database(conn):
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_plugin_folders_parent_id ON plugin_folders(parent_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_plugin_folder_associations_folder_id ON plugin_folder_associations(folder_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_app_config_key ON app_config(key)')
-        
+
         conn.commit()
     except Exception as e:
         conn.rollback()
