@@ -12,7 +12,7 @@ VERSION_INFO = """
     </tr>
     <tr>
         <td align="right">技术支持：</td>
-        <td>如有问题请联系：525337826#qq.com</td>
+        <td>如有问题请联系：525337826@qq.com</td>
     </tr>
     <tr>
         <td align="right">详情查看：</td>
