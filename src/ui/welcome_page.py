@@ -3,11 +3,13 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSpacerItem, QSizePolicy, QTreeWidgetItem
 
 from src.config.app_config import VERSION
+from src.ui.home_page import HomePage
 
 
 class WelcomePageManager:
     def __init__(self, main_window):
         self.main_window = main_window
+        self.home_page = None
 
     def add_home_button(self):
         """添加首页按钮"""
@@ -25,11 +27,44 @@ class WelcomePageManager:
 
     def init_welcome_page(self):
         """初始化欢迎页面"""
-        welcome_page = self.create_welcome_page()
-        self.main_window.tool_stack_widget.addWidget(welcome_page)
+        # 创建新的首页组件
+        self.home_page = HomePage()
+        self.home_page.plugin_selected.connect(self.on_plugin_selected)
+        self.main_window.tool_stack_widget.addWidget(self.home_page)
+
+    def on_plugin_selected(self, plugin_name):
+        """处理首页插件选择事件"""
+        # 在侧边栏中找到对应的插件项并选中
+        self.select_plugin_in_sidebar(plugin_name)
+        
+    def select_plugin_in_sidebar(self, plugin_name):
+        """在侧边栏中选中指定插件"""
+        tree = self.main_window.tool_list_widget
+        
+        # 遍历所有项查找匹配的插件
+        for i in range(tree.topLevelItemCount()):
+            item = tree.topLevelItem(i)
+            item_data = item.data(0, Qt.ItemDataRole.UserRole)
+            
+            if item_data and item_data.get("type") == "tool":
+                if item_data.get("name") == plugin_name:
+                    tree.setCurrentItem(item)
+                    return
+                    
+            # 检查子项
+            for j in range(item.childCount()):
+                child_item = item.child(j)
+                child_data = child_item.data(0, Qt.ItemDataRole.UserRole)
+                
+                if child_data and child_data.get("type") == "tool":
+                    if child_data.get("name") == plugin_name:
+                        # 展开父项
+                        item.setExpanded(True)
+                        tree.setCurrentItem(child_item)
+                        return
 
     def create_welcome_page(self):
-        """创建欢迎页面"""
+        """创建欢迎页面（旧版，保留兼容）"""
         welcome_widget = QWidget()
         welcome_layout = QVBoxLayout(welcome_widget)
         welcome_layout.setContentsMargins(60, 60, 60, 60)
@@ -115,9 +150,6 @@ class WelcomePageManager:
         card_layout.addWidget(version_label)
 
         welcome_layout.addWidget(card)
-        
-        # 底部留白
-        # welcome_layout.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
         return welcome_widget
 
