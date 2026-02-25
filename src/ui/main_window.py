@@ -1,8 +1,8 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMainWindow, QSplitter, QWidget, QHBoxLayout, \
-    QStackedWidget, QVBoxLayout, QLineEdit
+from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, \
+    QStackedWidget
 
-from src.ui.custom_tree_widget import CustomTreeWidget
+from src.ui.collapsible_sidebar import CollapsibleSidebar
 from src.ui.folder_manager import FolderManager
 from src.ui.menu_manager import MenuManager
 from src.ui.tool_manager import ToolManager
@@ -96,121 +96,13 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # 创建分割器
-        self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        main_layout.addWidget(self.splitter)
+        # 创建可折叠侧边栏
+        self.sidebar = CollapsibleSidebar(self)
+        main_layout.addWidget(self.sidebar)
 
-        # 创建左侧容器
-        left_container = QWidget()
-        left_layout = QVBoxLayout(left_container)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(0)
-
-        # 搜索框容器
-        search_container = QWidget()
-        search_container.setStyleSheet("background-color: #ffffff; border-right: 1px solid #dcdde1;")
-        search_layout = QVBoxLayout(search_container)
-        search_layout.setContentsMargins(15, 10, 15, 5)
-        
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("搜索插件...")
-        self.search_input.setStyleSheet("""
-            QLineEdit {
-                padding: 6px 10px;
-                border: 1px solid #dcdde1;
-                border-radius: 6px;
-                background-color: #f8f9fa;
-                font-size: 13px;
-                color: #2f3640;
-            }
-            QLineEdit:focus {
-                border: 1px solid #3498db;
-                background-color: #ffffff;
-            }
-        """)
-        search_layout.addWidget(self.search_input)
-        left_layout.addWidget(search_container)
-
-        # 创建左侧工具列表（树形结构）
-        self.tool_list_widget = CustomTreeWidget(self)
-        self.tool_list_widget.setMinimumWidth(220)
-        self.tool_list_widget.setMaximumWidth(300)
-        self.tool_list_widget.setObjectName("toolList")
-        self.tool_list_widget.setHeaderHidden(True)
-        self.tool_list_widget.setIndentation(12)  # 减小缩进，使布局更紧凑
-        self.tool_list_widget.setStyleSheet("""
-            QTreeWidget#toolList {
-                background-color: #ffffff;
-                border: none;
-                border-right: 1px solid #dcdde1;
-                outline: none;
-                padding-top: 10px;
-                selection-background-color: transparent;
-                show-decoration-selected: 0;
-            }
-            QTreeWidget#toolList::item {
-                padding: 8px 12px;
-                margin: 2px 8px;
-                border-radius: 6px;
-                color: #2f3640;
-                font-family: "Segoe UI", "Microsoft YaHei";
-                font-size: 13px;
-                border: 1px solid transparent;
-            }
-            QTreeWidget#toolList::item:hover {
-                background-color: #f1f2f6;
-                color: #3498db;
-            }
-            QTreeWidget#toolList::item:selected {
-                background-color: #3498db;
-                color: #ffffff !important; /* 强制白色，确保清晰 */
-                font-weight: bold;
-            }
-            /* 针对插件（无子项的项目）的选中优化 - 保持与文件夹一致 */
-            QTreeWidget#toolList::item:!has-children:selected {
-                background-color: #3498db; 
-                margin-left: 8px;
-            }
-            QTreeWidget#toolList::item:selected:hover {
-                background-color: #2980b9;
-            }
-            /* 文件夹项目样式 */
-            QTreeWidget#toolList::item:has-children {
-                font-weight: bold;
-                color: #7f8c8d;
-                margin-top: 6px;
-            }
-            /* 文件夹选中时文字也设为白色 */
-            QTreeWidget#toolList::item:has-children:selected {
-                color: #ffffff !important;
-            }
-            
-            /* 指示器样式优化 - 彻底透明化 Branch 区域 */
-            QTreeWidget#toolList::branch {
-                background-color: transparent;
-                width: 0px; /* 尽量减小 Branch 区域宽度 */
-            }
-            QTreeWidget#toolList::branch:selected,
-            QTreeWidget#toolList::branch:adjoins-item:selected,
-            QTreeWidget#toolList::branch:has-children:selected {
-                background-color: transparent;
-            }
-            
-            /* 隐藏所有默认的展开/折叠箭头，保持扁平化 */
-            QTreeWidget#toolList::branch:has-children:open,
-            QTreeWidget#toolList::branch:has-children:closed {
-                image: none;
-            }
-        """)
-        
-        # 设置拖放功能
-        self.tool_list_widget.setDragEnabled(True)
-        self.tool_list_widget.setAcceptDrops(True)
-        self.tool_list_widget.setDropIndicatorShown(True)
-        self.tool_list_widget.setDragDropMode(self.tool_list_widget.DragDropMode.InternalMove)
-        
-        left_layout.addWidget(self.tool_list_widget)
-        self.splitter.addWidget(left_container)
+        # 获取侧边栏中的控件引用
+        self.tool_list_widget = self.sidebar.get_tree_widget()
+        self.search_input = self.sidebar.get_search_input()
 
         # 创建右侧工具使用界面容器
         self.tool_stack_widget = QStackedWidget()
@@ -220,10 +112,7 @@ class MainWindow(QMainWindow):
                 border: none;
             }
         """)
-        self.splitter.addWidget(self.tool_stack_widget)
-
-        # 设置分割器比例
-        self.splitter.setSizes([220, 980])
+        main_layout.addWidget(self.tool_stack_widget, 1)  # 添加 stretch factor
 
         # 创建管理器实例
         self.welcome_page_manager = WelcomePageManager(self)
@@ -244,6 +133,11 @@ class MainWindow(QMainWindow):
         self.menu_manager.create_menus()
 
 
+    def on_sidebar_toggled(self, is_expanded):
+        """侧边栏收起/展开时的回调"""
+        # 可以在这里添加额外的布局调整逻辑
+        pass
+        
     def on_item_expanded(self, expanded_item):
         """当文件夹展开时，收起其它所有文件夹（手风琴模式）"""
         # 如果正在搜索，不执行手风琴模式，允许展开多个搜索结果

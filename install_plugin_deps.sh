@@ -39,6 +39,7 @@ fi
 #SPEECH_DRAFT_DEPS="openai requests python-docx" # openai speech_draft_plugin
 SPEECH_DRAFT_DEPS="requests"
 
+
 # 安装函数
 install_dependencies() {
     local deps=$1
@@ -71,20 +72,21 @@ install_dependencies() {
 echo -e "${YELLOW}请选择操作：${NC}"
 echo "  1) 安装所有插件依赖（推荐）"
 echo "  2) 仅安装 speech_draft_plugin 依赖"
-echo "  3) 清理 lib 目录"
+echo "  3) 仅安装 scheduled_tasks_plugin 依赖"
+echo "  4) 清理 lib 目录"
 echo "  0) 退出"
 echo ""
 read -p "请输入选项 [1]: " choice
 choice=${choice:-1}
 
 case $choice in
-    1|2)
+    1)
         echo ""
         echo -e "${BLUE}========================================${NC}"
-        echo -e "${BLUE}  安装依赖中...${NC}"
+        echo -e "${BLUE}  安装所有插件依赖中...${NC}"
         echo -e "${BLUE}========================================${NC}"
-        
-        if install_dependencies "$SPEECH_DRAFT_DEPS"; then
+
+        if install_dependencies "$INSTALL_DEPS"; then
             echo ""
             echo -e "${GREEN}========================================${NC}"
             echo -e "${GREEN}  ✅ 依赖安装完成！${NC}"
@@ -97,12 +99,49 @@ case $choice in
             exit 1
         fi
         ;;
-        
+    2)
+        echo ""
+        echo -e "${BLUE}========================================${NC}"
+        echo -e "${BLUE}  安装 speech_draft_plugin 依赖中...${NC}"
+        echo -e "${BLUE}========================================${NC}"
+
+        if install_dependencies "$INSTALL_DEPS"; then
+            echo ""
+            echo -e "${GREEN}========================================${NC}"
+            echo -e "${GREEN}  ✅ 依赖安装完成！${NC}"
+            echo -e "${GREEN}========================================${NC}"
+        else
+            echo ""
+            echo -e "${RED}========================================${NC}"
+            echo -e "${RED}  ❌ 依赖安装失败${NC}"
+            echo -e "${RED}========================================${NC}"
+            exit 1
+        fi
+        ;;
     3)
+        echo ""
+        echo -e "${BLUE}========================================${NC}"
+        echo -e "${BLUE}  安装 scheduled_tasks_plugin 依赖中...${NC}"
+        echo -e "${BLUE}========================================${NC}"
+
+        if install_dependencies "$INSTALL_DEPS"; then
+            echo ""
+            echo -e "${GREEN}========================================${NC}"
+            echo -e "${GREEN}  ✅ 依赖安装完成！${NC}"
+            echo -e "${GREEN}========================================${NC}"
+        else
+            echo ""
+            echo -e "${RED}========================================${NC}"
+            echo -e "${RED}  ❌ 依赖安装失败${NC}"
+            echo -e "${RED}========================================${NC}"
+            exit 1
+        fi
+        ;;
+    4)
         echo ""
         echo -e "${YELLOW}确定要清理 lib 目录吗？此操作不可恢复。${NC}"
         read -p "输入 'yes' 确认: " confirm
-        
+
         if [ "$confirm" = "yes" ]; then
             rm -rf "$LIB_DIR"/*
             echo -e "${GREEN}✅ lib 目录已清理${NC}"
@@ -110,12 +149,12 @@ case $choice in
             echo -e "${YELLOW}已取消操作${NC}"
         fi
         ;;
-        
+
     0)
         echo -e "${YELLOW}已退出${NC}"
         exit 0
         ;;
-        
+
     *)
         echo -e "${RED}❌ 无效选项${NC}"
         exit 1
