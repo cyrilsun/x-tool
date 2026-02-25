@@ -43,7 +43,6 @@ class CollapsibleSidebar(QWidget):
         self.setStyleSheet("""
             QWidget {
                 background-color: #ffffff;
-                border-right: 1px solid #dcdde1;
             }
             QPushButton {
                 border: none;
@@ -198,6 +197,7 @@ class CollapsibleSidebar(QWidget):
         # 收起状态下的展开按钮（固定在主布局底部，与内容容器互斥显示）
         self.collapsed_button_area = QWidget()
         self.collapsed_button_area.setFixedHeight(46)
+        self.collapsed_button_area.setStyleSheet("background-color: transparent;")
         self.collapsed_button_layout = QHBoxLayout(self.collapsed_button_area)
         self.collapsed_button_layout.setContentsMargins(0, 5, 0, 5)
         self.collapsed_button_layout.setSpacing(0)
@@ -209,7 +209,7 @@ class CollapsibleSidebar(QWidget):
         self.toggle_button_collapsed.setStyleSheet("""
             QPushButton {
                 border: none;
-                background-color: #ffffff;
+                background-color: #f1f2f6;
                 padding: 8px;
                 font-size: 16px;
                 color: #7f8c8d;
@@ -217,7 +217,7 @@ class CollapsibleSidebar(QWidget):
                 font-family: "Segoe UI", "Microsoft YaHei";
             }
             QPushButton:hover {
-                background-color: #f1f2f6;
+                background-color: #ffffff;
                 color: #3498db;
             }
         """)
