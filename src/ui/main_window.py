@@ -1,3 +1,5 @@
+import traceback
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, \
     QStackedWidget
@@ -126,6 +128,9 @@ class MainWindow(QMainWindow):
         self.tool_list_widget.customContextMenuRequested.connect(self.menu_manager.show_context_menu)
         self.tool_list_widget.itemExpanded.connect(self.on_item_expanded)
         self.search_input.textChanged.connect(self.filter_plugins)
+        
+        # 连接文件夹变化信号到首页刷新
+        self.folder_manager.folders_changed.connect(self.on_folders_changed)
 
         # 初始化界面
         self.welcome_page_manager.add_home_button()
@@ -137,6 +142,13 @@ class MainWindow(QMainWindow):
         """侧边栏收起/展开时的回调"""
         # 可以在这里添加额外的布局调整逻辑
         pass
+        
+    def on_folders_changed(self):
+        """文件夹结构变化时的回调 - 刷新首页分类"""
+        # 通知首页刷新分类
+        if (hasattr(self.welcome_page_manager, 'home_page') and 
+            self.welcome_page_manager.home_page):
+            self.welcome_page_manager.home_page.load_categories_from_sidebar()
         
     def on_item_expanded(self, expanded_item):
         """当文件夹展开时，收起其它所有文件夹（手风琴模式）"""
@@ -240,6 +252,12 @@ class MainWindow(QMainWindow):
         
         item_data = item.data(0, Qt.ItemDataRole.UserRole)
         
+        # 调试日志
+        logger.info(f"[on_item_moved] 被调用: item_data={item_data}, new_parent={new_parent}")
+        if new_parent:
+            new_parent_data = new_parent.data(0, Qt.ItemDataRole.UserRole)
+            logger.info(f"[on_item_moved] new_parent_data={new_parent_data}")
+        
         try:
             with Database() as db:
                 # 如果移动的是插件，更新其文件夹关联
@@ -248,16 +266,22 @@ class MainWindow(QMainWindow):
                     if tool_name:
                         # 获取新父文件夹ID
                         new_folder_id = None
-                        if new_parent and new_parent.data(0, Qt.ItemDataRole.UserRole).get('type') == 'folder':
-                            new_folder_data = new_parent.data(0, Qt.ItemDataRole.UserRole)
-                            new_folder_id = new_folder_data.get('folder_id')
+                        if new_parent:
+                            new_parent_data = new_parent.data(0, Qt.ItemDataRole.UserRole)
+                            if new_parent_data and new_parent_data.get('type') == 'folder':
+                                new_folder_id = new_parent_data.get('folder_id')
+                        
+                        logger.info(f"[on_item_moved] 准备保存: tool_name={tool_name}, new_folder_id={new_folder_id}")
                         
                         # 更新插件与文件夹的关联
                         db.plugin_association_manager.associate_plugin_with_folder(tool_name, new_folder_id)
                         # 更新插件文件夹映射
                         self.plugin_folder_map[tool_name] = new_folder_id
+                        logger.info(f"[on_item_moved] 插件 '{tool_name}' 已移动到文件夹 ID: {new_folder_id}")
                 
                 # 更新所有文件夹的排序顺序
                 self.folder_manager.save_folder_sort_order(db)
+                logger.info(f"[on_item_moved] 文件夹排序顺序已保存")
         except Exception as e:
-            logger.error(f"保存移动结果失败: {e}")
+            logger.error(f"[on_item_moved] 保存移动结果失败: {e}")
+            logger.error(traceback.format_exc())

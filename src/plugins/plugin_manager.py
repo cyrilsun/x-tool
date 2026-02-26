@@ -142,6 +142,8 @@ def load_plugins(window):
             if folder_id not in plugins_by_folder:
                 plugins_by_folder[folder_id] = []
             plugins_by_folder[folder_id].append((plugin_name, sort_order))
+        
+        logger.info(f"[PluginLoad] 插件按文件夹分组: {plugins_by_folder}")
     except Exception as e:
         logger.error(f"加载文件夹结构和插件关联失败: {e}")
         logger.error(traceback.format_exc())
@@ -174,16 +176,26 @@ def load_plugins(window):
                 return
             
             item_data = item.data(0, Qt.ItemDataRole.UserRole)
-            if item_data and item_data.get("type") == "folder" and item_data.get("folder_id") == folder_id:
-                folder_item = item
-                return
+            if item_data and item_data.get("type") == "folder":
+                item_folder_id = item_data.get("folder_id")
+                logger.debug(f"[PluginLoad] 检查项: type={item_data.get('type')}, folder_id={item_folder_id} (类型: {type(item_folder_id)}), 目标={folder_id} (类型: {type(folder_id)})")
+                if item_folder_id == folder_id:
+                    folder_item = item
+                    return
             
             for i in range(item.childCount()):
                 find_folder_item(item.child(i))
         
         # 先检查顶层项
-        for i in range(window.tool_list_widget.topLevelItemCount()):
-            find_folder_item(window.tool_list_widget.topLevelItem(i))
+        top_level_count = window.tool_list_widget.topLevelItemCount()
+        logger.info(f"[PluginLoad] 开始查找文件夹 ID {folder_id}, 顶层项数量: {top_level_count}")
+        for i in range(top_level_count):
+            item = window.tool_list_widget.topLevelItem(i)
+            item_data = item.data(0, Qt.ItemDataRole.UserRole)
+            logger.info(f"[PluginLoad] 顶层项 {i}: data={item_data}")
+            find_folder_item(item)
+        
+        logger.info(f"[PluginLoad] 查找文件夹 ID {folder_id}: {'找到' if folder_item else '未找到'}")
         
         if folder_item:
             # 按排序顺序添加插件到文件夹中

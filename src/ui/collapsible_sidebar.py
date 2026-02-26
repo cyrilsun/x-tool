@@ -309,3 +309,8 @@ class CollapsibleSidebar(QWidget):
     def get_search_input(self):
         """获取搜索框"""
         return self.search_input
+        
+    def on_item_moved(self, item, old_parent, old_index, new_parent, new_index):
+        """处理项目移动事件，转发到主窗口"""
+        if self.parent_window and hasattr(self.parent_window, 'on_item_moved'):
+            self.parent_window.on_item_moved(item, old_parent, old_index, new_parent, new_index)

@@ -15,18 +15,43 @@ class PluginAssociationManager:
         cursor = conn.cursor()
         
         # 获取当前文件夹下的最大排序值
-        cursor.execute(
-            "SELECT MAX(sort_order) FROM plugin_folder_associations WHERE folder_id = ?",
-            (folder_id,)
-        )
+        if folder_id is None:
+            cursor.execute(
+                "SELECT MAX(sort_order) FROM plugin_folder_associations WHERE folder_id IS NULL"
+            )
+        else:
+            cursor.execute(
+                "SELECT MAX(sort_order) FROM plugin_folder_associations WHERE folder_id = ?",
+                (folder_id,)
+            )
         result = cursor.fetchone()
         next_sort_order = result[0] + 1 if result[0] is not None else 0
         
-        # 插入或更新关联记录
+        # 先删除该插件的现有关联（处理从文件夹移回根目录的情况）
         cursor.execute(
-            "INSERT OR REPLACE INTO plugin_folder_associations (plugin_name, folder_id, sort_order) VALUES (?, ?, ?)",
+            "DELETE FROM plugin_folder_associations WHERE plugin_name = ?",
+            (plugin_name,)
+        )
+        
+        # 插入新的关联记录
+        cursor.execute(
+            "INSERT INTO plugin_folder_associations (plugin_name, folder_id, sort_order) VALUES (?, ?, ?)",
             (plugin_name, folder_id, next_sort_order)
         )
+        
+        # 立即提交事务
+        conn.commit()
+        
+        # 验证保存是否成功
+        cursor.execute(
+            "SELECT folder_id FROM plugin_folder_associations WHERE plugin_name = ?",
+            (plugin_name,)
+        )
+        result = cursor.fetchone()
+        
+        # 调试日志
+        from src.utils.logger import logger
+        logger.info(f"[DB] 已保存插件 '{plugin_name}' 到文件夹 ID: {folder_id}, 排序: {next_sort_order}, 验证结果: {result}")
     
     def get_plugin_folder(self, plugin_name):
         """获取插件所在的文件夹和排序顺序"""
@@ -74,7 +99,13 @@ class PluginAssociationManager:
         cursor.execute(
             "SELECT plugin_name, folder_id, sort_order FROM plugin_folder_associations"
         )
-        return [(row[0], row[1], row[2]) for row in cursor.fetchall()]
+        results = [(row[0], row[1], row[2]) for row in cursor.fetchall()]
+        
+        # 调试日志
+        from src.utils.logger import logger
+        logger.info(f"[DB] 从数据库加载了 {len(results)} 个插件关联: {results}")
+        
+        return results
     
     def clear_all_associations(self):
         """清空所有插件与文件夹关联"""

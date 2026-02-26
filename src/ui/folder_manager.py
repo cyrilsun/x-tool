@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal, QObject
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QTreeWidgetItem, QInputDialog, QMessageBox, QStyle
 
@@ -6,8 +6,12 @@ from src.db.database import Database
 from src.utils.logger import logger
 
 
-class FolderManager:
+class FolderManager(QObject):
+    # 定义信号：文件夹结构发生变化
+    folders_changed = pyqtSignal()
+    
     def __init__(self, main_window):
+        super().__init__()
         self.main_window = main_window
 
     def add_folder(self, folder_name, parent_item=None, folder_id=None):
@@ -74,6 +78,9 @@ class FolderManager:
             # 保存排序顺序
             with Database() as db:
                 self.save_folder_sort_order(db)
+            
+            # 发射信号通知文件夹结构变化
+            self.folders_changed.emit()
 
         except Exception as e:
             msg_box = QMessageBox(self.main_window)
@@ -120,6 +127,9 @@ class FolderManager:
                 if item_data:
                     item_data["name"] = new_name
                     folder_item.setData(0, Qt.ItemDataRole.UserRole, item_data)
+                
+                # 发射信号通知文件夹结构变化
+                self.folders_changed.emit()
 
         except Exception as e:
             msg_box = QMessageBox(self.main_window)
@@ -174,6 +184,9 @@ class FolderManager:
 
             # 清除引用
             folder_item = None
+            
+            # 发射信号通知文件夹结构变化
+            self.folders_changed.emit()
 
         except Exception as e:
             msg_box = QMessageBox(self.main_window)
@@ -225,8 +238,16 @@ class FolderManager:
             elif item_data.get("type") == "tool":
                 plugin_name = item_data.get("name")
                 if plugin_name:
-                    # 更新顶层插件的排序顺序（folder_id为None表示顶层插件）
-                    db.plugin_association_manager.update_plugin_sort_order(plugin_name, i)
+                    # 获取当前插件的关联信息
+                    existing_folder_id, existing_sort_order = db.plugin_association_manager.get_plugin_folder(plugin_name)
+
+                    logger.info(f"[save_folder_sort_order] 顶层插件 '{plugin_name}': existing_folder_id={existing_folder_id}, existing_sort_order={existing_sort_order}, current_position={i}")
+
+                    if existing_folder_id is None:
+                        # 插件在根目录，只更新排序顺序
+                        if existing_sort_order != i:
+                            db.plugin_association_manager.update_plugin_sort_order(plugin_name, i)
+                    # 如果插件不在根目录（已被移动到文件夹），不做处理
             
             # 保存子文件夹排序
             for j in range(item.childCount()):
@@ -240,13 +261,25 @@ class FolderManager:
                 elif child_data.get("type") == "tool":
                     plugin_name = child_data.get("name")
                     if plugin_name:
-                        # 更新文件夹内插件的排序顺序
-                        db.plugin_association_manager.update_plugin_sort_order(plugin_name, j)
+                        # 获取当前插件的关联信息
+                        existing_folder_id, existing_sort_order = db.plugin_association_manager.get_plugin_folder(plugin_name)
+                        # 获取父文件夹ID
+                        parent_data = item.data(0, Qt.ItemDataRole.UserRole)
+                        parent_folder_id = parent_data.get("folder_id") if parent_data else None
+
+                        logger.info(f"[save_folder_sort_order] 子插件 '{plugin_name}': existing_folder_id={existing_folder_id}, existing_sort_order={existing_sort_order}, parent_folder_id={parent_folder_id}, current_position={j}")
+
+                        if existing_folder_id == parent_folder_id:
+                            # 关联正确，只更新排序顺序
+                            if existing_sort_order != j:
+                                db.plugin_association_manager.update_plugin_sort_order(plugin_name, j)
+                        # 如果关联不匹配，不做处理（这种情况应该由 on_item_moved 处理）
 
     def load_folder_structure(self, db):
         """加载文件夹结构"""
         # 获取所有文件夹
         folders = db.folder_manager.get_all_folders()
+        logger.info(f"[FolderLoad] 从数据库加载了 {len(folders)} 个文件夹: {folders}")
         
         # 按父ID分组
         folders_by_parent = {}
@@ -254,6 +287,8 @@ class FolderManager:
             if parent_id not in folders_by_parent:
                 folders_by_parent[parent_id] = []
             folders_by_parent[parent_id].append((folder_id, name, sort_order))
+        
+        logger.info(f"[FolderLoad] 文件夹按父ID分组: {folders_by_parent}")
         
         # 递归创建文件夹结构
         def create_folder_tree(parent_id, parent_item=None):
@@ -265,7 +300,12 @@ class FolderManager:
             
             for folder_id, name, sort_order in sorted_folders:
                 folder_item = self.add_folder(name, parent_item, folder_id)
+                logger.info(f"[FolderLoad] 创建文件夹 '{name}' (ID: {folder_id})")
                 create_folder_tree(folder_id, folder_item)
         
         # 从根目录开始创建
         create_folder_tree(None)
+        
+        # 检查创建的文件夹
+        top_level_count = self.main_window.tool_list_widget.topLevelItemCount()
+        logger.info(f"[FolderLoad] 加载完成后，左侧栏顶层项数量: {top_level_count}")

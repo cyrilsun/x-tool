@@ -62,6 +62,9 @@ class ToolManager:
 
     def add_tool_to_folder(self, tool_name, widget, folder_item, sort_order=None):
         """添加工具到指定文件夹"""
+        # 先获取当前子项数量（添加前）
+        current_child_count = folder_item.childCount()
+        
         # 添加到文件夹下
         item = QTreeWidgetItem(folder_item, [tool_name])
         item.setFont(0, QFont("Microsoft YaHei", 10))
@@ -75,7 +78,8 @@ class ToolManager:
         })
         
         # 如果指定了排序顺序，调整项目位置
-        if sort_order is not None and sort_order < folder_item.childCount():
+        # 使用添加前的子项数量进行判断
+        if sort_order is not None and 0 <= sort_order < current_child_count:
             folder_item.removeChild(item)
             folder_item.insertChild(sort_order, item)
         

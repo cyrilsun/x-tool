@@ -205,9 +205,9 @@ class HomePage(QWidget):
         main_layout.addWidget(search_container)
         
         # ========== 分类标签区域 ==========
-        category_container = QWidget()
-        self.category_layout = QHBoxLayout(category_container)
-        self.category_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.category_container = QWidget()
+        self.category_layout = QHBoxLayout(self.category_container)
+        self.category_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.category_layout.setSpacing(12)
         
         # 分类按钮样式
@@ -230,20 +230,13 @@ class HomePage(QWidget):
         """
         
         self.category_buttons = {}
-        categories = ["全部", "热门", "Excel工具", "文本工具", "格式转换", "生成工具"]
-        
-        for category in categories:
-            btn = QPushButton(category)
-            btn.setCheckable(True)
-            btn.setStyleSheet(self.category_btn_style)
-            btn.clicked.connect(lambda checked, c=category: self.on_category_changed(c))
-            self.category_layout.addWidget(btn)
-            self.category_buttons[category] = btn
+        # 初始只创建"全部"按钮，其他分类从左侧文件夹动态获取
+        self._create_category_button("全部")
         
         # 默认选中"全部"
         self.category_buttons["全部"].setChecked(True)
         
-        main_layout.addWidget(category_container)
+        main_layout.addWidget(self.category_container)
         
         # ========== 插件卡片网格区域（带滚动条） ==========
         self.scroll_area = QScrollArea()
@@ -340,9 +333,70 @@ class HomePage(QWidget):
             parent = parent.parent()
         return None
         
+    def _create_category_button(self, category_name):
+        """创建分类按钮"""
+        btn = QPushButton(category_name)
+        btn.setCheckable(True)
+        btn.setStyleSheet(self.category_btn_style)
+        btn.clicked.connect(lambda checked, c=category_name: self.on_category_changed(c))
+        self.category_layout.addWidget(btn)
+        self.category_buttons[category_name] = btn
+        
+    def load_categories_from_sidebar(self):
+        """从左侧边栏首层文件夹加载分类，保持与左侧栏相同的顺序"""
+        main_window = self._get_main_window()
+        if not main_window or not hasattr(main_window, 'tool_list_widget'):
+            return
+            
+        tree = main_window.tool_list_widget
+        
+        # 按左侧栏顺序收集文件夹名称
+        ordered_categories = ["全部"]  # "全部"始终放在第一位
+        
+        # 遍历左侧边栏首层项，按顺序获取文件夹名称
+        for i in range(tree.topLevelItemCount()):
+            item = tree.topLevelItem(i)
+            item_data = item.data(0, Qt.ItemDataRole.UserRole)
+            
+            # 只处理文件夹类型
+            if item_data and item_data.get("type") == "folder":
+                folder_name = item.text(0)
+                if folder_name not in ordered_categories:
+                    ordered_categories.append(folder_name)
+        
+        # 获取现有的分类名称
+        existing_categories = set(self.category_buttons.keys())
+        new_categories_set = set(ordered_categories)
+        
+        # 移除不再存在的分类按钮（保留"全部"）
+        for category in list(existing_categories):
+            if category not in new_categories_set and category != "全部":
+                btn = self.category_buttons.pop(category)
+                self.category_layout.removeWidget(btn)
+                btn.deleteLater()
+        
+        # 按左侧栏顺序重新排列按钮
+        # 首先隐藏所有现有按钮
+        for btn in self.category_buttons.values():
+            btn.setParent(None)
+        
+        # 按顺序添加按钮（创建新按钮或重用现有按钮）
+        for category in ordered_categories:
+            if category in self.category_buttons:
+                # 重用现有按钮
+                btn = self.category_buttons[category]
+                self.category_layout.addWidget(btn)
+            else:
+                # 创建新按钮
+                self._create_category_button(category)
+                
+        logger.info(f"从左侧边栏加载了分类: {ordered_categories}")
+        
     def refresh_plugins(self):
         """刷新插件列表 - 与左侧列表保持同步"""
         self.load_plugins()
+        # 同时刷新分类按钮
+        self.load_categories_from_sidebar()
             
     def calculate_columns(self):
         """根据窗口宽度计算每行显示的卡片数量"""
@@ -417,23 +471,39 @@ class HomePage(QWidget):
             # 分类筛选
             if category == "全部":
                 filtered.append(plugin)
-            elif category == "热门":
-                if plugin["name"] in ["Excel对比", "Excel合并", "文本去重", "JSON格式化"]:
-                    filtered.append(plugin)
-            elif category == "Excel工具":
-                if "excel" in plugin["name"].lower():
-                    filtered.append(plugin)
-            elif category == "文本工具":
-                if any(keyword in plugin["name"] for keyword in ["文本", "行过滤", "前后缀"]):
-                    filtered.append(plugin)
-            elif category == "格式转换":
-                if any(keyword in plugin["name"] for keyword in ["JSON", "XML", "YAML"]):
-                    filtered.append(plugin)
-            elif category == "生成工具":
-                if any(keyword in plugin["name"] for keyword in ["生成", "UUID", "身份证"]):
+            else:
+                # 根据文件夹分类筛选
+                if self._is_plugin_in_category(plugin["name"], category):
                     filtered.append(plugin)
                     
         return filtered
+        
+    def _is_plugin_in_category(self, plugin_name, category_name):
+        """检查插件是否属于指定分类（文件夹）"""
+        main_window = self._get_main_window()
+        if not main_window or not hasattr(main_window, 'tool_list_widget'):
+            return False
+            
+        tree = main_window.tool_list_widget
+        
+        # 遍历左侧边栏查找指定文件夹
+        for i in range(tree.topLevelItemCount()):
+            item = tree.topLevelItem(i)
+            item_data = item.data(0, Qt.ItemDataRole.UserRole)
+            
+            # 找到匹配的文件夹
+            if item_data and item_data.get("type") == "folder":
+                if item.text(0) == category_name:
+                    # 检查插件是否在该文件夹下
+                    for j in range(item.childCount()):
+                        child_item = item.child(j)
+                        child_data = child_item.data(0, Qt.ItemDataRole.UserRole)
+                        if child_data and child_data.get("type") == "tool":
+                            if child_data.get("name") == plugin_name:
+                                return True
+                    return False
+                    
+        return False
         
     def get_plugin_icon(self, plugin_name):
         """根据插件名称获取对应图标"""
