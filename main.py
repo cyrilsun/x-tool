@@ -87,6 +87,10 @@ if __name__ == "__main__":
 
     load_plugins(window)
 
+    # 插件加载完成后，刷新首页插件列表
+    if hasattr(window.welcome_page_manager, 'home_page') and window.welcome_page_manager.home_page:
+        window.welcome_page_manager.home_page.refresh_plugins()
+
     # 默认选中首页
     # 获取首页项
     home_item = window.tool_list_widget.topLevelItem(0)  # 首页是第一个顶层项

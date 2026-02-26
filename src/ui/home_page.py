@@ -132,7 +132,8 @@ class HomePage(QWidget):
         title_layout.setSpacing(10)
         
         # 主标题
-        title_label = QLabel("🔧 X-Tool 工具箱")
+        # title_label = QLabel("🔧 X-Tool 工具箱")
+        title_label = QLabel("X-Tool 工具箱")
         title_label.setStyleSheet("""
             font-size: 32px;
             font-weight: bold;
@@ -142,14 +143,14 @@ class HomePage(QWidget):
         title_layout.addWidget(title_label)
         
         # 副标题
-        subtitle_label = QLabel("一站式桌面工具集合，让工作更高效")
-        subtitle_label.setStyleSheet("""
-            font-size: 16px;
-            color: #7f8c8d;
-        """)
-        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_layout.addWidget(subtitle_label)
-        
+        # subtitle_label = QLabel("一站式桌面工具集合，让工作更高效")
+        # subtitle_label.setStyleSheet("""
+        #     font-size: 16px;
+        #     color: #7f8c8d;
+        # """)
+        # subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # title_layout.addWidget(subtitle_label)
+        #
         main_layout.addWidget(title_container)
         
         # ========== 搜索区域 ==========
@@ -284,13 +285,64 @@ class HomePage(QWidget):
         main_layout.addWidget(self.scroll_area, 1)
         
     def load_plugins(self):
-        """从数据库加载插件"""
+        """加载插件 - 与左侧列表保持一致，从主窗口的 plugin_widget_map 获取"""
+        try:
+            main_window = self._get_main_window()
+            if main_window and hasattr(main_window, 'plugin_widget_map'):
+                # 从主窗口获取已加载的插件映射，与左侧列表保持一致
+                plugin_map = main_window.plugin_widget_map
+                
+                # 清空现有插件列表
+                self.plugins = []
+                
+                # 遍历插件映射，构建插件数据
+                for plugin_name, widget in plugin_map.items():
+                    # 尝试从插件实例获取描述信息
+                    description = ""
+                    if hasattr(widget, 'description'):
+                        description = widget.description
+                    elif hasattr(widget, 'get_description'):
+                        description = widget.get_description()
+                    
+                    self.plugins.append({
+                        "id": 0,
+                        "name": plugin_name,
+                        "file_name": "",
+                        "description": description,
+                        "created_at": "",
+                        "updated_at": ""
+                    })
+                
+                self.refresh_cards()
+                logger.info(f"首页从主窗口加载了 {len(self.plugins)} 个插件")
+            else:
+                # 如果无法获取主窗口，尝试从数据库加载
+                self._load_plugins_from_database()
+        except Exception as e:
+            logger.error(f"加载插件失败: {e}")
+            
+    def _load_plugins_from_database(self):
+        """从数据库加载插件（备用方案）"""
         try:
             with Database() as db:
                 self.plugins = db.plugin_manager.get_all_plugins()
                 self.refresh_cards()
+                logger.info(f"首页从数据库加载了 {len(self.plugins)} 个插件")
         except Exception as e:
-            logger.error(f"加载插件失败: {e}")
+            logger.error(f"从数据库加载插件失败: {e}")
+            
+    def _get_main_window(self):
+        """获取主窗口实例"""
+        parent = self.parent()
+        while parent:
+            if hasattr(parent, 'plugin_widget_map'):
+                return parent
+            parent = parent.parent()
+        return None
+        
+    def refresh_plugins(self):
+        """刷新插件列表 - 与左侧列表保持同步"""
+        self.load_plugins()
             
     def calculate_columns(self):
         """根据窗口宽度计算每行显示的卡片数量"""
