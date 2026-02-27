@@ -48,12 +48,6 @@ class MainWindow(QMainWindow):
 
         # 创建右侧工具使用界面容器
         self.tool_stack_widget = QStackedWidget()
-        self.tool_stack_widget.setStyleSheet("""
-            QStackedWidget {
-                background-color: #f5f6fa;
-                border: none;
-            }
-        """)
         main_layout.addWidget(self.tool_stack_widget, 1)  # 添加 stretch factor
 
         # 创建管理器实例
@@ -68,7 +62,7 @@ class MainWindow(QMainWindow):
         self.tool_list_widget.customContextMenuRequested.connect(self.menu_manager.show_context_menu)
         self.tool_list_widget.itemExpanded.connect(self.on_item_expanded)
         self.search_input.textChanged.connect(self.filter_plugins)
-        
+
         # 连接文件夹变化信号到首页刷新
         self.folder_manager.folders_changed.connect(self.on_folders_changed)
 
@@ -79,28 +73,27 @@ class MainWindow(QMainWindow):
 
         # 注册到主题管理器，支持主题切换
         get_theme_manager().register_widget(self)
+
+        # 初始应用主题（包括侧边栏）
+        self._apply_theme()
         logger.info("主窗口已注册到主题管理器")
 
     def _apply_theme(self):
         """
         应用主题样式
         由主题管理器在主题切换时调用
+        只应用主窗口和插件样式，不改变侧边栏原有样式
         """
-        # 重新应用主窗口样式
-        self.setStyleSheet(Theme.get_main_window_style())
+        # 从主题管理器获取当前主题
+        current_theme = get_theme_manager().get_current_theme()
 
-        # 重新应用工具堆栈窗口样式
-        self.tool_stack_widget.setStyleSheet("""
-            QStackedWidget {
-                background-color: #f5f6fa;
-                border: none;
-            }
-        """)
+        # 重新应用主窗口样式（菜单栏、分割器等）
+        self.setStyleSheet(current_theme.get_main_window_style())
 
         # 刷新所有已加载插件的样式
         for plugin_name, plugin_widget in self.plugin_widget_map.items():
             if hasattr(plugin_widget, 'setStyleSheet'):
-                plugin_widget.setStyleSheet(Theme.get_plugin_style())
+                plugin_widget.setStyleSheet(current_theme.get_plugin_style())
 
         logger.debug("主窗口主题样式已刷新")
 

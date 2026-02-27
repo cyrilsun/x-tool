@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import QMenu
 
 from src.plugins.plugin_manager import import_plugin, backup_plugins, restore_plugins, export_single_plugin
 from src.utils.app_utils import show_about_dialog
+from src.themes.simple_theme_manager import get_theme_manager
+from src.utils.logger import logger
 
 
 class MenuManager:
@@ -14,17 +16,17 @@ class MenuManager:
     def _init_menus(self):
         """初始化菜单结构，只执行一次"""
         menubar = self.main_window.menuBar()
-        
+
         # 清除现有的所有菜单
         menubar.clear()
 
-        # 创建并保存文件菜单引用
+        # ========== 创建文件菜单 ==========
         self.file_menu = menubar.addMenu("文件")
 
-        # 创建并保存新建子菜单引用
+        # 创建新建子菜单
         self.new_menu = self.file_menu.addMenu("新建")
 
-        # 创建并保存新建文件夹菜单项引用
+        # 新建文件夹
         self.new_folder_action = QAction("文件夹", self.main_window)
         self.new_folder_action.triggered.connect(lambda: self.main_window.folder_manager.create_folder())
         self.new_menu.addAction(self.new_folder_action)
@@ -32,17 +34,17 @@ class MenuManager:
         # 添加分隔线
         self.file_menu.addSeparator()
 
-        # 创建并保存导入插件菜单项引用
+        # 导入插件
         self.import_plugin_action = QAction("导入插件", self.main_window)
         self.import_plugin_action.triggered.connect(lambda: import_plugin(self.main_window))
         self.file_menu.addAction(self.import_plugin_action)
 
-        # 创建并保存备份插件菜单项引用
+        # 备份插件
         self.backup_plugin_action = QAction("备份插件", self.main_window)
         self.backup_plugin_action.triggered.connect(lambda: backup_plugins(self.main_window))
         self.file_menu.addAction(self.backup_plugin_action)
 
-        # 创建并保存恢复插件菜单项引用
+        # 恢复插件
         self.restore_plugin_action = QAction("恢复插件", self.main_window)
         self.restore_plugin_action.triggered.connect(lambda: restore_plugins(self.main_window))
         self.file_menu.addAction(self.restore_plugin_action)
@@ -50,48 +52,101 @@ class MenuManager:
         # 添加分隔线
         self.file_menu.addSeparator()
 
-        # 创建并保存退出菜单项引用
+        # 退出
         self.quit_action = QAction("退出X-Tool", self.main_window)
         self.quit_action.setMenuRole(QAction.MenuRole.QuitRole)
         self.quit_action.triggered.connect(self.main_window.close)
         self.file_menu.addAction(self.quit_action)
 
-        # 创建并保存帮助菜单引用
+        # ========== 创建设置菜单 ==========
+        self.settings_menu = menubar.addMenu("设置")
+
+        # 创建外观子菜单
+        self.appearance_menu = self.settings_menu.addMenu("外观")
+
+        # 浅色主题菜单项
+        self.light_theme_action = QAction("浅色", self.main_window)
+        self.light_theme_action.setCheckable(True)
+        self.light_theme_action.triggered.connect(self._on_light_theme_selected)
+        self.appearance_menu.addAction(self.light_theme_action)
+
+        # 深色主题菜单项
+        self.dark_theme_action = QAction("深色", self.main_window)
+        self.dark_theme_action.setCheckable(True)
+        self.dark_theme_action.triggered.connect(self._on_dark_theme_selected)
+        self.appearance_menu.addAction(self.dark_theme_action)
+
+        # 初始化主题选择状态
+        self._update_theme_menu_state()
+
+        # ========== 创建帮助菜单 ==========
         self.help_menu = menubar.addMenu("帮助")
 
-        # 创建并保存关于菜单项引用
+        # 关于
         self.about_action = QAction("关于", self.main_window)
         self.about_action.setMenuRole(QAction.MenuRole.AboutRole)
         self.about_action.triggered.connect(lambda: show_about_dialog(self.main_window))
         self.help_menu.addAction(self.about_action)
 
+    def _on_light_theme_selected(self):
+        """浅色主题被选中"""
+        theme_manager = get_theme_manager()
+        theme_manager.set_light_theme()
+        self._update_theme_menu_state()
+        logger.info("用户选择浅色主题")
+
+    def _on_dark_theme_selected(self):
+        """深色主题被选中"""
+        theme_manager = get_theme_manager()
+        theme_manager.set_dark_theme()
+        self._update_theme_menu_state()
+        logger.info("用户选择深色主题")
+
+    def _update_theme_menu_state(self):
+        """更新主题菜单选中状态"""
+        theme_manager = get_theme_manager()
+        is_dark = theme_manager.is_dark_mode()
+
+        # 更新菜单项的选中状态（互斥）
+        self.light_theme_action.setChecked(not is_dark)
+        self.dark_theme_action.setChecked(is_dark)
+
     def create_menus(self):
         """创建/更新菜单显示"""
-        # 不再重建菜单结构，只确保菜单可见
+        # 确保所有菜单可见
         self.file_menu.menuAction().setVisible(True)
+        self.settings_menu.menuAction().setVisible(True)
         self.help_menu.menuAction().setVisible(True)
-        
+
         # 确保所有菜单项可见
         for action in self.file_menu.actions():
+            action.setVisible(True)
+        for action in self.settings_menu.actions():
             action.setVisible(True)
         for action in self.help_menu.actions():
             action.setVisible(True)
         for action in self.new_menu.actions():
             action.setVisible(True)
-    
+        for action in self.appearance_menu.actions():
+            action.setVisible(True)
+
     def update_translations(self):
         """更新菜单翻译文本"""
         # 更新菜单标题
         self.file_menu.setTitle("文件")
         self.new_menu.setTitle("新建")
+        self.settings_menu.setTitle("设置")
+        self.appearance_menu.setTitle("外观")
         self.help_menu.setTitle("帮助")
-        
+
         # 更新菜单项文本
         self.new_folder_action.setText("文件夹")
         self.import_plugin_action.setText("导入插件")
         self.backup_plugin_action.setText("备份插件")
         self.restore_plugin_action.setText("恢复插件")
         self.quit_action.setText("退出X-Tool")
+        self.light_theme_action.setText("浅色")
+        self.dark_theme_action.setText("深色")
         self.about_action.setText("关于")
 
     def show_context_menu(self, position):
@@ -169,7 +224,7 @@ class MenuManager:
                 export_plugin_action.setEnabled(False)  # 禁用菜单项
         else:
             export_plugin_action.setEnabled(False)  # 禁用菜单项
-        
+
         menu.addSeparator()
 
         # 删除插件
@@ -177,4 +232,3 @@ class MenuManager:
         delete_plugin_action.triggered.connect(lambda: self.main_window.tool_manager.delete_plugin(tool_item))
 
         menu.exec(self.main_window.tool_list_widget.mapToGlobal(position))
-

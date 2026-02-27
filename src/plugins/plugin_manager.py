@@ -14,7 +14,7 @@ from src.db.database import Database
 from src.plugins.plugin_loader import PluginLoader, get_plugin_directory
 from src.utils.path_utils import get_lib_directory
 from src.utils.logger import logger
-from src.themes.theme import Theme
+from src.themes.simple_theme_manager import get_theme_manager
 
 
 def load_plugins(window):
@@ -22,15 +22,18 @@ def load_plugins(window):
     plugin_dir = get_plugin_directory()
     loader = PluginLoader(plugin_dir)
     plugins = loader.load_all_plugins()
-    
+
+    # 获取当前主题
+    current_theme = get_theme_manager().get_current_theme()
+
     # 先加载所有插件
     plugin_map = {}
     for plugin in plugins:
         try:
             plugin_map[plugin.name] = plugin
 
-            # 使用主题系统 - 样式完全一致，但使用颜色常量
-            plugin.setStyleSheet(Theme.get_plugin_style())
+            # 使用当前主题系统
+            plugin.setStyleSheet(current_theme.get_plugin_style())
 
             try:
                 plugin.on_activate()
