@@ -13,24 +13,24 @@ class DarkTheme:
     COLOR_PRIMARY_HOVER = "#3498db"   # 悬停蓝
     COLOR_PRIMARY_PRESSED = "#2980b9" # 按下蓝
 
-    # 背景色 - 深色
-    COLOR_BG_MAIN = "#1e1e1e"          # 主背景（深灰）
-    COLOR_BG_WHITE = "#2d2d2d"        # 次背景（稍浅）
+    # 背景色 - 深色（参考IDEA）
+    COLOR_BG_MAIN = "#2b2b2b"          # 主背景（IDEA风格深灰）
+    COLOR_BG_WHITE = "#3c3f41"        # 次背景（稍浅，侧边栏用）
 
     # 文字色 - 浅色
-    COLOR_TEXT_PRIMARY = "#e0e0e0"   # 主要文字（浅灰）
-    COLOR_TEXT_SECONDARY = "#a0a0a0" # 次要文字（中灰）
+    COLOR_TEXT_PRIMARY = "#a9b7c6"   # 主要文字（IDEA风格浅灰）
+    COLOR_TEXT_SECONDARY = "#858999" # 次要文字（中灰）
     COLOR_TEXT_TITLE = "#ffffff"      # 标题文字（白色）
     COLOR_TEXT_WHITE = "#ffffff"      # 白色文字
 
     # 边框色
-    COLOR_BORDER = "#404040"          # 边框灰（深色）
-    COLOR_BORDER_FOCUS = "#5dade2"   # 聚焦边框（主色）
+    COLOR_BORDER = "#4e5254"          # 边框灰（深色）
+    COLOR_BORDER_FOCUS = "#4c8eda"   # 聚焦边框（蓝色）
 
     # 其他
-    COLOR_HOVER_BG = "#3d3d3d"        # 悬停背景
-    COLOR_SCROLLBAR = "#808080"      # 滚动条（更亮，在深色背景可见）
-    COLOR_SCROLLBAR_HOVER = "#909090" # 滚动条悬停
+    COLOR_HOVER_BG = "#4e5254"        # 悬停背景（稍亮）
+    COLOR_SCROLLBAR = "#6e7073"      # 滚动条
+    COLOR_SCROLLBAR_HOVER = "#858999" # 滚动条悬停
 
     # ========== 样式变体颜色 ==========
 

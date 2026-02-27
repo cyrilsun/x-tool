@@ -4,8 +4,8 @@ from PyQt6.QtWidgets import QMenu
 
 from src.plugins.plugin_manager import import_plugin, backup_plugins, restore_plugins, export_single_plugin
 from src.utils.app_utils import show_about_dialog
-from src.themes.simple_theme_manager import get_theme_manager
-from src.utils.logger import logger
+# from src.themes.simple_theme_manager import get_theme_manager  # 暂时注释
+# from src.utils.logger import logger  # 暂时注释
 
 
 class MenuManager:
@@ -61,23 +61,24 @@ class MenuManager:
         # ========== 创建设置菜单 ==========
         self.settings_menu = menubar.addMenu("设置")
 
-        # 创建外观子菜单
-        self.appearance_menu = self.settings_menu.addMenu("外观")
-
-        # 浅色主题菜单项
-        self.light_theme_action = QAction("浅色", self.main_window)
-        self.light_theme_action.setCheckable(True)
-        self.light_theme_action.triggered.connect(self._on_light_theme_selected)
-        self.appearance_menu.addAction(self.light_theme_action)
-
-        # 深色主题菜单项
-        self.dark_theme_action = QAction("深色", self.main_window)
-        self.dark_theme_action.setCheckable(True)
-        self.dark_theme_action.triggered.connect(self._on_dark_theme_selected)
-        self.appearance_menu.addAction(self.dark_theme_action)
-
-        # 初始化主题选择状态
-        self._update_theme_menu_state()
+        # ========== 外观子菜单（已注释）==========
+        # # 创建外观子菜单
+        # self.appearance_menu = self.settings_menu.addMenu("外观")
+        #
+        # # 浅色主题菜单项
+        # self.light_theme_action = QAction("浅色", self.main_window)
+        # self.light_theme_action.setCheckable(True)
+        # self.light_theme_action.triggered.connect(self._on_light_theme_selected)
+        # self.appearance_menu.addAction(self.light_theme_action)
+        #
+        # # 深色主题菜单项
+        # self.dark_theme_action = QAction("深色", self.main_window)
+        # self.dark_theme_action.setCheckable(True)
+        # self.dark_theme_action.triggered.connect(self._on_dark_theme_selected)
+        # self.appearance_menu.addAction(self.dark_theme_action)
+        #
+        # # 初始化主题选择状态
+        # self._update_theme_menu_state()
 
         # ========== 创建帮助菜单 ==========
         self.help_menu = menubar.addMenu("帮助")
@@ -88,28 +89,29 @@ class MenuManager:
         self.about_action.triggered.connect(lambda: show_about_dialog(self.main_window))
         self.help_menu.addAction(self.about_action)
 
-    def _on_light_theme_selected(self):
-        """浅色主题被选中"""
-        theme_manager = get_theme_manager()
-        theme_manager.set_light_theme()
-        self._update_theme_menu_state()
-        logger.info("用户选择浅色主题")
-
-    def _on_dark_theme_selected(self):
-        """深色主题被选中"""
-        theme_manager = get_theme_manager()
-        theme_manager.set_dark_theme()
-        self._update_theme_menu_state()
-        logger.info("用户选择深色主题")
-
-    def _update_theme_menu_state(self):
-        """更新主题菜单选中状态"""
-        theme_manager = get_theme_manager()
-        is_dark = theme_manager.is_dark_mode()
-
-        # 更新菜单项的选中状态（互斥）
-        self.light_theme_action.setChecked(not is_dark)
-        self.dark_theme_action.setChecked(is_dark)
+    # ========== 主题切换方法（已注释）==========
+    # def _on_light_theme_selected(self):
+    #     """浅色主题被选中"""
+    #     theme_manager = get_theme_manager()
+    #     theme_manager.set_light_theme()
+    #     self._update_theme_menu_state()
+    #     logger.info("用户选择浅色主题")
+    #
+    # def _on_dark_theme_selected(self):
+    #     """深色主题被选中"""
+    #     theme_manager = get_theme_manager()
+    #     theme_manager.set_dark_theme()
+    #     self._update_theme_menu_state()
+    #     logger.info("用户选择深色主题")
+    #
+    # def _update_theme_menu_state(self):
+    #     """更新主题菜单选中状态"""
+    #     theme_manager = get_theme_manager()
+    #     is_dark = theme_manager.is_dark_mode()
+    #
+    #     # 更新菜单项的选中状态（互斥）
+    #     self.light_theme_action.setChecked(not is_dark)
+    #     self.dark_theme_action.setChecked(is_dark)
 
     def create_menus(self):
         """创建/更新菜单显示"""
@@ -127,8 +129,9 @@ class MenuManager:
             action.setVisible(True)
         for action in self.new_menu.actions():
             action.setVisible(True)
-        for action in self.appearance_menu.actions():
-            action.setVisible(True)
+        # 外观菜单已注释
+        # for action in self.appearance_menu.actions():
+        #     action.setVisible(True)
 
     def update_translations(self):
         """更新菜单翻译文本"""
@@ -136,7 +139,8 @@ class MenuManager:
         self.file_menu.setTitle("文件")
         self.new_menu.setTitle("新建")
         self.settings_menu.setTitle("设置")
-        self.appearance_menu.setTitle("外观")
+        # 外观菜单已注释
+        # self.appearance_menu.setTitle("外观")
         self.help_menu.setTitle("帮助")
 
         # 更新菜单项文本
@@ -145,8 +149,9 @@ class MenuManager:
         self.backup_plugin_action.setText("备份插件")
         self.restore_plugin_action.setText("恢复插件")
         self.quit_action.setText("退出X-Tool")
-        self.light_theme_action.setText("浅色")
-        self.dark_theme_action.setText("深色")
+        # 外观菜单项已注释
+        # self.light_theme_action.setText("浅色")
+        # self.dark_theme_action.setText("深色")
         self.about_action.setText("关于")
 
     def show_context_menu(self, position):

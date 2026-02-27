@@ -73,16 +73,13 @@ class MainWindow(QMainWindow):
 
         # 注册到主题管理器，支持主题切换
         get_theme_manager().register_widget(self)
-
-        # 初始应用主题（包括侧边栏）
-        self._apply_theme()
         logger.info("主窗口已注册到主题管理器")
 
     def _apply_theme(self):
         """
         应用主题样式
         由主题管理器在主题切换时调用
-        只应用主窗口和插件样式，不改变侧边栏原有样式
+        只应用主窗口和插件样式
         """
         # 从主题管理器获取当前主题
         current_theme = get_theme_manager().get_current_theme()
