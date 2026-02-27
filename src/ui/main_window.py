@@ -10,6 +10,7 @@ from src.ui.menu_manager import MenuManager
 from src.ui.tool_manager import ToolManager
 from src.ui.welcome_page import WelcomePageManager
 from src.utils.logger import logger
+from src.themes.simple_theme import SimpleTheme
 
 
 class MainWindow(QMainWindow):
@@ -24,70 +25,8 @@ class MainWindow(QMainWindow):
         # 插件文件夹映射，用于数据库操作
         self.plugin_folder_map = {}  # plugin_name: folder_id
 
-        # 设置应用样式
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f5f6fa;
-            }
-            QMainWindow::separator {
-                background-color: #dcdde1;
-                width: 1px;
-            }
-            QMenuBar {
-                background-color: #ffffff;
-                border-bottom: 1px solid #dcdde1;
-                padding: 5px 10px;
-                font-family: "Segoe UI", "Microsoft YaHei";
-                font-size: 14px;
-                color: #2f3640;
-            }
-            QMenuBar::item {
-                background: transparent;
-                padding: 4px 10px;
-                margin-right: 5px;
-                border-radius: 4px;
-            }
-            QMenuBar::item:selected {
-                background-color: #f1f2f6;
-                color: #3498db;
-            }
-            QMenu {
-                background-color: #ffffff;
-                border: 1px solid #dcdde1;
-                padding: 5px;
-                border-radius: 6px;
-            }
-            QMenu::item {
-                padding: 8px 25px 8px 20px;
-                border-radius: 4px;
-                margin: 2px;
-                font-size: 13px;
-                color: #2f3640;
-            }
-            QMenu::item:selected {
-                background-color: #3498db;
-                color: #ffffff;
-            }
-            QMenu::separator {
-                height: 1px;
-                background: #f1f2f6;
-                margin: 5px 10px;
-            }
-            QSplitter::handle {
-                background-color: #dcdde1;
-            }
-            QSplitter::handle:horizontal {
-                width: 1px;
-            }
-            QMessageBox {
-                background-color: #ffffff;
-            }
-            QPushButton {
-                padding: 8px 15px;
-                border-radius: 4px;
-                font-size: 13px;
-            }
-        """)
+        # 设置应用样式 - 使用简单主题系统，样式完全复制自原始代码
+        self.setStyleSheet(SimpleTheme.get_main_window_style())
 
         # 创建中央部件
         central_widget = QWidget()

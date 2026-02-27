@@ -14,6 +14,7 @@ from src.db.database import Database
 from src.plugins.plugin_loader import PluginLoader, get_plugin_directory
 from src.utils.path_utils import get_lib_directory
 from src.utils.logger import logger
+from src.themes.simple_theme import SimpleTheme
 
 
 def load_plugins(window):
@@ -27,95 +28,9 @@ def load_plugins(window):
     for plugin in plugins:
         try:
             plugin_map[plugin.name] = plugin
-            
-            plugin.setStyleSheet("""
-                QWidget {
-                    background-color: transparent;
-                    color: #2f3640;
-                    font-family: "Segoe UI", "Microsoft YaHei";
-                    font-size: 14px;
-                }
-                QGroupBox {
-                    font-size: 16px;
-                    font-weight: bold;
-                    color: #2c3e50;
-                    border: 1px solid #dcdde1;
-                    border-radius: 8px;
-                    margin-top: 15px;
-                    padding-top: 15px;
-                }
-                QGroupBox::title {
-                    subcontrol-origin: margin;
-                    left: 15px;
-                    padding: 0 5px;
-                }
-                QLabel {
-                    color: #636e72;
-                }
-                QLineEdit, QComboBox, QSpinBox, QTextEdit {
-                    border: 1px solid #dcdde1;
-                    border-radius: 4px;
-                    padding: 6px 10px;
-                    background-color: #ffffff;
-                }
-                QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QTextEdit:focus {
-                    border: 1px solid #3498db;
-                }
-                QPushButton {
-                    background-color: #3498db;
-                    color: white;
-                    border: none;
-                    padding: 8px 16px;
-                    font-weight: bold;
-                    border-radius: 4px;
-                }
-                QPushButton:hover {
-                    background-color: #2980b9;
-                }
-                QPushButton:pressed {
-                    background-color: #1e3799;
-                }
-                QScrollArea {
-                    border: none;
-                    background-color: transparent;
-                }
-                QScrollBar:vertical {
-                    border: none;
-                    background: rgba(0, 0, 0, 0.05);
-                    width: 8px;
-                    margin: 0px;
-                    border-radius: 4px;
-                }
-                QScrollBar::handle:vertical {
-                    background: #95a5a6;
-                    min-height: 20px;
-                    border-radius: 4px;
-                }
-                QScrollBar::handle:vertical:hover {
-                    background: #7f8c8d;
-                }
-                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                    height: 0px;
-                }
-                QScrollBar:horizontal {
-                    border: none;
-                    background: rgba(0, 0, 0, 0.05);
-                    height: 8px;
-                    margin: 0px;
-                    border-radius: 4px;
-                }
-                QScrollBar::handle:horizontal {
-                    background: #95a5a6;
-                    min-width: 20px;
-                    border-radius: 4px;
-                }
-                QScrollBar::handle:horizontal:hover {
-                    background: #7f8c8d;
-                }
-                QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-                    width: 0px;
-                }
-            """)
+
+            # 使用简单主题系统 - 样式完全复制自原始代码
+            plugin.setStyleSheet(SimpleTheme.get_plugin_style())
 
             try:
                 plugin.on_activate()
