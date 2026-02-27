@@ -10,7 +10,8 @@ from src.ui.menu_manager import MenuManager
 from src.ui.tool_manager import ToolManager
 from src.ui.welcome_page import WelcomePageManager
 from src.utils.logger import logger
-from src.themes.simple_theme import SimpleTheme
+from src.themes.theme import Theme
+from src.themes.simple_theme_manager import get_theme_manager
 
 
 class MainWindow(QMainWindow):
@@ -25,8 +26,8 @@ class MainWindow(QMainWindow):
         # 插件文件夹映射，用于数据库操作
         self.plugin_folder_map = {}  # plugin_name: folder_id
 
-        # 设置应用样式 - 使用简单主题系统，样式完全复制自原始代码
-        self.setStyleSheet(SimpleTheme.get_main_window_style())
+        # 设置应用样式 - 使用主题系统，样式完全一致，但使用颜色常量
+        self.setStyleSheet(Theme.get_main_window_style())
 
         # 创建中央部件
         central_widget = QWidget()
@@ -75,6 +76,33 @@ class MainWindow(QMainWindow):
         self.welcome_page_manager.add_home_button()
         self.welcome_page_manager.init_welcome_page()
         self.menu_manager.create_menus()
+
+        # 注册到主题管理器，支持主题切换
+        get_theme_manager().register_widget(self)
+        logger.info("主窗口已注册到主题管理器")
+
+    def _apply_theme(self):
+        """
+        应用主题样式
+        由主题管理器在主题切换时调用
+        """
+        # 重新应用主窗口样式
+        self.setStyleSheet(Theme.get_main_window_style())
+
+        # 重新应用工具堆栈窗口样式
+        self.tool_stack_widget.setStyleSheet("""
+            QStackedWidget {
+                background-color: #f5f6fa;
+                border: none;
+            }
+        """)
+
+        # 刷新所有已加载插件的样式
+        for plugin_name, plugin_widget in self.plugin_widget_map.items():
+            if hasattr(plugin_widget, 'setStyleSheet'):
+                plugin_widget.setStyleSheet(Theme.get_plugin_style())
+
+        logger.debug("主窗口主题样式已刷新")
 
 
     def on_sidebar_toggled(self, is_expanded):

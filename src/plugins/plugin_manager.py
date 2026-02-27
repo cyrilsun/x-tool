@@ -14,7 +14,7 @@ from src.db.database import Database
 from src.plugins.plugin_loader import PluginLoader, get_plugin_directory
 from src.utils.path_utils import get_lib_directory
 from src.utils.logger import logger
-from src.themes.simple_theme import SimpleTheme
+from src.themes.theme import Theme
 
 
 def load_plugins(window):
@@ -29,8 +29,8 @@ def load_plugins(window):
         try:
             plugin_map[plugin.name] = plugin
 
-            # 使用简单主题系统 - 样式完全复制自原始代码
-            plugin.setStyleSheet(SimpleTheme.get_plugin_style())
+            # 使用主题系统 - 样式完全一致，但使用颜色常量
+            plugin.setStyleSheet(Theme.get_plugin_style())
 
             try:
                 plugin.on_activate()
