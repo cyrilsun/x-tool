@@ -1,34 +1,39 @@
 """
 主题系统模块
 
-使用示例:
-    from src.themes import get_theme_manager
+新主题系统（推荐使用）:
+    from src.themes.theme import Theme
+
+    # 应用样式
+    widget.setStyleSheet(Theme.get_plugin_style())
+    widget.setStyleSheet(Theme.get_main_window_style())
+
+    # 获取按钮样式
+    button.setStyleSheet(Theme.get_button_style("success"))
+
+    # 获取颜色
+    color = Theme.COLOR_PRIMARY
+
+主题管理器:
+    from src.themes.simple_theme_manager import get_theme_manager
 
     # 获取主题管理器
     theme_manager = get_theme_manager()
 
-    # 应用主题到控件
-    theme_manager.apply_theme_to_widget(widget, "plugin")
+    # 注册窗口
+    theme_manager.register_widget(window)
 
-    # 获取按钮样式
-    button_style = theme_manager.get_button_style("primary")
-    button.setStyleSheet(button_style)
-
-    # 切换主题
-    theme_manager.set_theme("dark")
-
-    # 获取主题颜色
-    primary_color = theme_manager.get_color("primary")
+    # 刷新主题
+    theme_manager.refresh_theme()
 """
 
-from src.themes.base_theme import BaseTheme, ThemeColors
-from src.themes.light_theme import LightTheme
-from src.themes.theme_manager import ThemeManager, get_theme_manager
+# 新主题系统（推荐）
+from src.themes.theme import Theme
+from src.themes.simple_theme_manager import get_theme_manager, ThemeManager as SimpleThemeManager
 
 __all__ = [
-    'BaseTheme',
-    'ThemeColors',
-    'LightTheme',
-    'ThemeManager',
+    # 新系统
+    'Theme',
+    'SimpleThemeManager',
     'get_theme_manager',
 ]
