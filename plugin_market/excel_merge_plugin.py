@@ -3,7 +3,7 @@ import pandas as pd
 import glob
 from typing import List, Optional
 from datetime import datetime
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, QLineEdit, QComboBox, QDialog, QTextEdit, QScrollArea, QCheckBox, QSpinBox, QWidget, QFrame
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, QLineEdit, QComboBox, QDialog, QTextEdit, QScrollArea, QCheckBox, QSpinBox, QWidget
 
 from src.plugins.base_plugin import BasePlugin
 from src.utils.logger import logger
@@ -556,8 +556,21 @@ class ExcelMerger:
 
 
 class ExcelMergePlugin(BasePlugin):
+    """
+    Excel表格合并插件
+    支持合并多个Excel文件到一个文件或合并多个Sheet到一个Sheet
+    """
+
+    # ========== 插件元数据 ==========
+    PLUGIN_INFO = {
+        "name": "表格合并",
+        "description": "合并多个Excel文件到一个文件或合并多个Sheet到一个Sheet",
+        "version": "1.0.0",
+        "category": "办公工具",
+    }
+
     def __init__(self):
-        super().__init__("表格合并", "合并多个Excel文件到一个文件或合并多个Sheet到一个Sheet")
+        super().__init__()
 
         self.source_path = ""  # 可以是文件路径或文件夹路径
         self.selected_files = None  # 保存用户选择的文件列表
@@ -566,22 +579,13 @@ class ExcelMergePlugin(BasePlugin):
         self._setup_ui()
 
     def _setup_ui(self):
-        # 创建主布局
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-        
-        # 创建滚动区域
-        self.main_scroll = QScrollArea()
-        self.main_scroll.setWidgetResizable(True)
-        self.main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        # 创建容器组件
-        container = QWidget()
-        container.setObjectName("pluginContainer")
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
+        """
+        设置插件 UI
+
+        使用 BasePlugin 提供的统一滚动条布局
+        """
+        # 获取内容布局（滚动条已自动设置好）
+        layout = self.get_content_layout()
 
         source_group = QGroupBox("选择源文件")
         source_group.setStyleSheet("""
@@ -893,10 +897,6 @@ class ExcelMergePlugin(BasePlugin):
         # 添加到主布局
         layout.addLayout(description_header_layout)
         layout.addWidget(self.description_scroll)
-
-        # 设置滚动区域
-        self.main_scroll.setWidget(container)
-        main_layout.addWidget(self.main_scroll)
 
     def toggle_description(self):
         """

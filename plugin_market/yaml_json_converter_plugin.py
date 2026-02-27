@@ -2,8 +2,8 @@ import json
 import os
 import sys
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox, 
-    QMessageBox, QWidget, QScrollArea, QPlainTextEdit, QFrame, 
+    QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
+    QMessageBox, QWidget, QPlainTextEdit,
     QApplication, QCheckBox
 )
 from PyQt6.QtCore import Qt
@@ -16,6 +16,15 @@ class YamlJsonConverterPlugin(BasePlugin):
     YAML/JSON 互转插件
     支持 YAML 转 JSON 以及 JSON 转 YAML，具备格式化输出选项
     """
+
+    # 插件元数据
+    PLUGIN_INFO = {
+        "name": "YAML/JSON互转",
+        "description": "支持 YAML 与 JSON 格式的相互转换",
+        "version": "1.0.0",
+        "category": "数据转换",
+        "author": "X-Tool"
+    }
     
     YAML_SAMPLE = """# YAML 样例
 server:
@@ -51,7 +60,7 @@ features:
 }"""
 
     def __init__(self):
-        super().__init__("YAML/JSON互转", "支持 YAML 与 JSON 格式的相互转换")
+        super().__init__()
         # 初始化私有库目录 (PyYAML 可能需要在此安装)
         self._init_plugin_libs()
         self._setup_ui()
@@ -76,23 +85,8 @@ features:
 
     def _setup_ui(self):
         """设置UI界面"""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-
-        # 全局滚动区域
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout = self.get_content_layout()
         layout.setSpacing(15)
-        
-        main_scroll.setWidget(scroll_widget)
-        main_layout.addWidget(main_scroll)
 
         # 1. 标题
         title_label = QLabel("YAML/JSON互转")
@@ -185,31 +179,16 @@ features:
         layout.addLayout(btn_layout)
 
         # 4. 插件说明
-        self.description_expanded = False
-        description_header_layout = QHBoxLayout()
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("background-color: #f8f9fa; color: #343a40; border: 1px solid #dee2e6; padding: 4px 8px; font-size: 12px; border-radius: 4px;")
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-        
-        self.description_content = QPlainTextEdit()
-        self.description_content.setReadOnly(True)
-        self.description_content.setPlainText(
-            "YAML/JSON互转工具说明：\n"
-            "1. YAML 转 JSON：解析 YAML 文档并生成对应的 JSON 格式，支持复杂嵌套结构。\n"
-            "2. JSON 转 YAML：将 JSON 对象转为 YAML 格式，YAML 具有更好的可读性。\n"
-            "3. PRETTY：勾选后 JSON 输出缩进，YAML 输出标准排版；不勾选则输出紧凑型文本。\n"
-            "4. 依赖说明：本工具依赖 PyYAML 库。如果环境未安装，请在终端执行 'pip install PyYAML'。"
-        )
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_content)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.description_scroll.setFixedHeight(50)
-        
+        description_html = """
+        <h4>YAML/JSON互转工具说明：</h4>
+        <ul>
+            <li><strong>YAML 转 JSON：</strong>解析 YAML 文档并生成对应的 JSON 格式，支持复杂嵌套结构。</li>
+            <li><strong>JSON 转 YAML：</strong>将 JSON 对象转为 YAML 格式，YAML 具有更好的可读性。</li>
+            <li><strong>PRETTY：</strong>勾选后 JSON 输出缩进，YAML 输出标准排版；不勾选则输出紧凑型文本。</li>
+            <li><strong>依赖说明：</strong>本工具依赖 PyYAML 库。如果环境未安装，请在终端执行 'pip install PyYAML'。</li>
+        </ul>
+        """
+        description_header_layout, self.description_content, self.toggle_description_btn, self.description_scroll = self.create_description_section(description_html)
         layout.addLayout(description_header_layout)
         layout.addWidget(self.description_scroll)
 
@@ -242,16 +221,6 @@ features:
                 background-color: {hover_color}; 
             }}
         """
-
-    def toggle_description(self):
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(120)
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
 
     def clear_all(self):
         self.input_editor.clear()

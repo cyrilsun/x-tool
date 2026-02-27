@@ -1,7 +1,7 @@
 import os
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox, 
-    QMessageBox, QWidget, QScrollArea, QTextEdit, QFrame, QApplication
+    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox,
+    QMessageBox, QWidget, QScrollArea, QTextEdit, QApplication
 )
 from PyQt6.QtCore import Qt
 from src.plugins.base_plugin import BasePlugin
@@ -11,9 +11,16 @@ class TextDeduplicatePlugin(BasePlugin):
     """
     文本处理插件：文本去重
     """
-    
+
+    PLUGIN_INFO = {
+        "name": "文本去重工具",
+        "description": "支持按行去重，并保留文本原有顺序",
+        "version": "1.0.0",
+        "category": "文本工具"
+    }
+
     def __init__(self):
-        super().__init__("文本去重工具", "支持按行去重，并保留文本原有顺序")
+        super().__init__()
         self._setup_ui()
 
     def get_widget(self) -> QWidget:
@@ -24,23 +31,7 @@ class TextDeduplicatePlugin(BasePlugin):
 
     def _setup_ui(self):
         """设置UI界面"""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-
-        # 全局滚动区域
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(20)
-        
-        main_scroll.setWidget(scroll_widget)
-        main_layout.addWidget(main_scroll)
+        layout = self.get_content_layout()
 
         # 核心对比区域 (水平布局)
         comparison_layout = QHBoxLayout()
@@ -126,7 +117,6 @@ class TextDeduplicatePlugin(BasePlugin):
         self.description_scroll = QScrollArea()
         self.description_scroll.setWidget(self.description_content)
         self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.description_scroll.setFixedHeight(50)
         
         layout.addLayout(description_header_layout)

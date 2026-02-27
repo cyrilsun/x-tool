@@ -5,7 +5,7 @@ from typing import List
 import pandas as pd
 from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog,
-    QGroupBox, QMessageBox, QLineEdit, QComboBox, QScrollArea,
+    QGroupBox, QMessageBox, QLineEdit, QComboBox,
     QTextEdit, QWidget, QFrame
 )
 
@@ -369,15 +369,22 @@ class AttendanceStatsPlugin(BasePlugin):
     考勤统计插件
     用于统计个人和整体的考勤数据
     """
-    
+
+    PLUGIN_INFO = {
+        'name': '考勤统计',
+        'description': '统计个人和整体的考勤数据，支持导出结果',
+        'version': '1.0.0',
+        'category': 'data_analysis'
+    }
+
     def __init__(self):
-        super().__init__("考勤统计", "统计个人和整体的考勤数据，支持导出结果")
-        
+        super().__init__()
+
         self.file_path = ""
         self.sheet_name = None
         self.stats = None
         self.stats_result = None
-        
+
         self._setup_ui()
     
     def on_activate(self):
@@ -393,24 +400,8 @@ class AttendanceStatsPlugin(BasePlugin):
         """
         设置UI界面
         """
-        # 创建主滚动区域
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        # 创建滚动区域内的主widget
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        # 设置主布局
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-        main_layout.addWidget(main_scroll)
-        main_scroll.setWidget(scroll_widget)
+        # 使用基类提供的内容布局
+        layout = self.get_content_layout()
         
         # 1. 文件上传与工作表选择区域
         file_group = QGroupBox("1. 上传文件、选择工作表")

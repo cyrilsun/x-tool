@@ -2,7 +2,7 @@ import os
 import xml.dom.minidom
 import re
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox, 
+    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox,
     QMessageBox, QWidget, QScrollArea, QPlainTextEdit, QFrame, QApplication
 )
 from PyQt6.QtCore import Qt
@@ -13,9 +13,17 @@ class XmlFormatPlugin(BasePlugin):
     """
     XML 格式化与压缩插件
     """
-    
+
+    # 插件元数据
+    PLUGIN_INFO = {
+        "name": "XML格式化",
+        "description": "支持 XML 数据的格式化排版与压缩",
+        "version": "1.0.0",
+        "category": "格式化工具",
+    }
+
     def __init__(self):
-        super().__init__("XML格式化", "支持 XML 数据的格式化排版与压缩")
+        super().__init__()
         self._setup_ui()
 
     def get_widget(self) -> QWidget:
@@ -26,23 +34,8 @@ class XmlFormatPlugin(BasePlugin):
 
     def _setup_ui(self):
         """设置UI界面"""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-
-        # 全局滚动区域
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        main_scroll.setWidget(scroll_widget)
-        main_layout.addWidget(main_scroll)
+        # 使用基类提供的统一布局结构
+        layout = self.get_content_layout()
 
         # 1. 标题
         title_label = QLabel("XML格式化")

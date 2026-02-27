@@ -1,7 +1,7 @@
 import os
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox, 
-    QMessageBox, QWidget, QScrollArea, QTextEdit, QFrame, QApplication
+    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox,
+    QMessageBox, QWidget, QTextEdit, QScrollArea, QFrame, QApplication
 )
 from PyQt6.QtCore import Qt
 from src.plugins.base_plugin import BasePlugin
@@ -11,9 +11,16 @@ class TextLineFilterPlugin(BasePlugin):
     """
     文本处理插件：筛选奇数偶数行
     """
-    
+
+    PLUGIN_INFO = {
+        "name": "筛选奇偶行",
+        "description": "支持批量筛选文本的奇数行和偶数行",
+        "version": "1.0.0",
+        "category": "文本处理",
+    }
+
     def __init__(self):
-        super().__init__("筛选奇偶行", "支持批量筛选文本的奇数行和偶数行")
+        super().__init__()
         self._setup_ui()
 
     def get_widget(self) -> QWidget:
@@ -24,23 +31,7 @@ class TextLineFilterPlugin(BasePlugin):
 
     def _setup_ui(self):
         """设置UI界面"""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-
-        # 全局滚动区域
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        main_scroll.setWidget(scroll_widget)
-        main_layout.addWidget(main_scroll)
+        layout = self.get_content_layout()
 
         # 1. 输入区域
         input_group = QGroupBox("输入设置")

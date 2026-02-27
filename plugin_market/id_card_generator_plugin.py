@@ -17,7 +17,16 @@ class IdCardGeneratorPlugin(BasePlugin):
     身份证号码生成器插件
     支持根据省市区、出生日期、性别批量生成身份证号码
     """
-    
+
+    # 插件元数据
+    PLUGIN_INFO = {
+        "name": "身份证生成",
+        "description": "批量生成符合规则的身份证号码 (用于测试)",
+        "version": "1.0.0",
+        "category": "数据生成",
+        "author": "X-Tool Team"
+    }
+
     # 简化的行政区划数据 (省: {市: {区: 代码}})
     # 为了演示提供基础数据，实际应用中建议使用完整的 GB/T 2260 数据库
     AREA_DATA = {
@@ -82,14 +91,14 @@ class IdCardGeneratorPlugin(BasePlugin):
     }
 
     def __init__(self):
-        super().__init__("身份证生成", "批量生成符合规则的身份证号码 (用于测试)")
-        
+        super().__init__()
+
         # 1. 动态加载插件私有库 (不影响基础代码)
         self._init_plugin_libs()
-        
+
         # 2. 加载完整省市区数据 (外部 JSON 优先，内置兜底)
         self.area_data = self._load_area_data()
-        
+
         self._setup_ui()
 
     def _init_plugin_libs(self):
@@ -136,22 +145,7 @@ class IdCardGeneratorPlugin(BasePlugin):
 
     def _setup_ui(self):
         """设置UI界面"""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        main_scroll.setWidget(scroll_widget)
-        main_layout.addWidget(main_scroll)
+        layout = self.get_content_layout()
 
         # 1. 生成设置区域
         settings_group = QGroupBox("生成设置")

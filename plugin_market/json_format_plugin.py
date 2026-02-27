@@ -1,8 +1,8 @@
 import json
 import os
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox, 
-    QMessageBox, QWidget, QScrollArea, QPlainTextEdit, QFrame, QApplication
+    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox,
+    QMessageBox, QWidget, QPlainTextEdit, QApplication
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QColor, QTextFormat
@@ -13,9 +13,18 @@ class JsonFormatPlugin(BasePlugin):
     """
     JSON 格式化与压缩插件
     """
-    
+
+    # 插件元数据
+    PLUGIN_INFO = {
+        "name": "JSON格式化",
+        "description": "支持 JSON 数据的格式化排版与压缩",
+        "version": "1.0.0",
+        "category": "开发工具",
+        "author": "X-Tool",
+    }
+
     def __init__(self):
-        super().__init__("JSON格式化", "支持 JSON 数据的格式化排版与压缩")
+        super().__init__()
         self._setup_ui()
 
     def get_widget(self) -> QWidget:
@@ -26,23 +35,8 @@ class JsonFormatPlugin(BasePlugin):
 
     def _setup_ui(self):
         """设置UI界面"""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-
-        # 全局滚动区域
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        main_scroll.setWidget(scroll_widget)
-        main_layout.addWidget(main_scroll)
+        # 使用基类提供的内容布局
+        layout = self.get_content_layout()
 
         # 1. 标题
         title_label = QLabel("JSON格式化")
@@ -95,6 +89,7 @@ class JsonFormatPlugin(BasePlugin):
         layout.addLayout(btn_layout)
 
         # 4. 插件说明
+        from PyQt6.QtWidgets import QTextEdit, QScrollArea, QFrame
         self.description_expanded = False
         description_header_layout = QHBoxLayout()
         description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
@@ -104,8 +99,9 @@ class JsonFormatPlugin(BasePlugin):
         description_header_layout.addWidget(description_title)
         description_header_layout.addStretch()
         description_header_layout.addWidget(self.toggle_description_btn)
-        
+
         self.description_content = QPlainTextEdit()
+        self.description_content.setProperty("isDescriptionArea", True)  # 标记为说明区域，保留滚动条
         self.description_content.setReadOnly(True)
         self.description_content.setPlainText(
             "JSON格式化工具：\n"
@@ -119,7 +115,7 @@ class JsonFormatPlugin(BasePlugin):
         self.description_scroll.setWidgetResizable(True)
         self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.description_scroll.setFixedHeight(50)
-        
+
         layout.addLayout(description_header_layout)
         layout.addWidget(self.description_scroll)
 

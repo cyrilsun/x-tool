@@ -225,17 +225,25 @@ class DataComparisonPlugin(BasePlugin):
     表格数据对比插件
     支持标记重复数据、提取重复数据、标记唯一数据、提取唯一数据
     """
-    
+
+    # 插件元数据
+    PLUGIN_INFO = {
+        "name": "数据对比",
+        "description": "标记/提取重复数据和唯一数据",
+        "version": "1.0.0",
+        "category": "数据处理",
+    }
+
     def __init__(self):
-        super().__init__("数据对比", "标记/提取重复数据和唯一数据")
-        
+        super().__init__()
+
         self.file_path = ""
         self.sheet_name = None
         self.key_columns = []
-        
+
         self.comparator = None
         self.result = None
-        
+
         self._setup_ui()
     
     def on_activate(self):
@@ -251,24 +259,8 @@ class DataComparisonPlugin(BasePlugin):
         """
         设置UI界面
         """
-        # 创建主滚动区域
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        # 创建滚动区域内的主widget
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        # 设置主布局
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-        main_layout.addWidget(main_scroll)
-        main_scroll.setWidget(scroll_widget)
+        # 使用基类提供的内容布局
+        layout = self.get_content_layout()
         
         # 1. 文件上传与工作表选择区域
         file_group = QGroupBox("1. 上传文件、选择工作表")

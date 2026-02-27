@@ -16,7 +16,16 @@ class XmlJsonConverterPlugin(BasePlugin):
     XML/JSON 互转插件
     支持 XML 转 JSON 以及 JSON 转 XML，具备格式化输出选项
     """
-    
+
+    # ========== 插件元数据 ==========
+    PLUGIN_INFO = {
+        "name": "XML/JSON互转",
+        "description": "支持 XML 与 JSON 格式的相互转换",
+        "version": "1.0.0",
+        "author": "X-Tool",
+        "category": "数据转换",
+    }
+
     XML_SAMPLE = """<note>
     <to>Tove</to>
     <from>Jani</from>
@@ -34,34 +43,25 @@ class XmlJsonConverterPlugin(BasePlugin):
 }"""
 
     def __init__(self):
-        super().__init__("XML/JSON互转", "支持 XML 与 JSON 格式的相互转换")
+        super().__init__()
         self._setup_ui()
+        self.on_init()
 
     def get_widget(self) -> QWidget:
         return self
 
+    def on_init(self):
+        """插件初始化回调"""
+        self.log_debug("XML/JSON互转插件初始化")
+
     def on_activate(self):
-        logger.info("XML/JSON互转插件被激活")
+        """插件激活回调"""
+        self.log_info("XML/JSON互转插件被激活")
 
     def _setup_ui(self):
         """设置UI界面"""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-
-        # 全局滚动区域
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        main_scroll.setWidget(scroll_widget)
-        main_layout.addWidget(main_scroll)
+        # 使用标准布局辅助方法
+        layout = self.get_content_layout()
 
         # 1. 标题
         title_label = QLabel("XML/JSON互转")

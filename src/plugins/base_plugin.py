@@ -140,6 +140,7 @@ class BasePlugin(QWidget, ABC, metaclass=_BasePluginMeta):
         自动禁用所有 QTextEdit 和 QPlainTextEdit 的内部滚动条
 
         使用外层插件滚动条，避免出现双滚动条。
+        说明区域的 QTextEdit 保留滚动条（通过 isDescriptionArea 属性标记）。
         在插件初始化完成后通过定时器自动调用。
         """
         if self._finalized:
@@ -152,12 +153,18 @@ class BasePlugin(QWidget, ABC, metaclass=_BasePluginMeta):
 
             # 检查当前 widget
             if isinstance(widget, (QTextEdit, QPlainTextEdit)):
+                # 跳过说明区域，保留其滚动条
+                if widget.property("isDescriptionArea"):
+                    return
                 widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
                 widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-            # 递归处理子组件
+            # 递归处理子组件（只处理直接子组件，避免重复）
             for child in widget.findChildren(QWidget):
                 if isinstance(child, (QTextEdit, QPlainTextEdit)):
+                    # 跳过说明区域，保留其滚动条
+                    if child.property("isDescriptionArea"):
+                        continue
                     child.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
                     child.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -210,10 +217,13 @@ class BasePlugin(QWidget, ABC, metaclass=_BasePluginMeta):
         self._main_layout.setContentsMargins(0, 0, 0, 0)
         self._main_layout.setSpacing(0)
 
-        # 创建滚动区域
+        # 创建滚动区域 - 确保有滚动条
         self._scroll_area = QScrollArea(self)
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        # 明确设置滚动条策略为按需显示
+        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         # 创建内容容器
         self._content_widget = QWidget()
@@ -360,8 +370,9 @@ class BasePlugin(QWidget, ABC, metaclass=_BasePluginMeta):
         # 构建完整内容（元数据 + 说明）
         full_content = self._build_description_content(html_content)
 
-        # 内容区域
+        # 内容区域 - 标记为说明区域，保留滚动条
         content_text = QTextEdit()
+        content_text.setProperty("isDescriptionArea", True)  # 标记为说明区域
         content_text.setReadOnly(True)
         content_text.setHtml(full_content)
 
@@ -370,6 +381,9 @@ class BasePlugin(QWidget, ABC, metaclass=_BasePluginMeta):
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         scroll_area.setFixedHeight(50)  # 默认收起状态
+        # 说明区域保留滚动条，用于查看长内容
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         return header_layout, content_text, toggle_btn, scroll_area
 

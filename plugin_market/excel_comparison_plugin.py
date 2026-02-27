@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 
 import pandas as pd
 from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QGroupBox, QMessageBox, \
-    QLineEdit, QComboBox, QTextEdit, QScrollArea, QCheckBox, QWidget, QFrame, QListWidget
+    QLineEdit, QComboBox, QTextEdit, QCheckBox, QWidget, QFrame, QListWidget
 
 from src.plugins.base_plugin import BasePlugin
 from src.utils.logger import logger
@@ -675,20 +675,30 @@ class ExcelComparisonPlugin(BasePlugin):
     Excel表格对比插件
     支持行级、列级对比，对比出新增、删除、修改的数据
     """
-    
+
+    # 插件元数据
+    PLUGIN_INFO = {
+        "name": "表格对比",
+        "description": "对比两个Excel文件，识别新增、删除、修改的数据",
+        "version": "1.0.0",
+        "author": "",
+        "category": "数据处理",
+        "icon": ""
+    }
+
     def __init__(self):
-        super().__init__("表格对比", "对比两个Excel文件，识别新增、删除、修改的数据")
-        
+        super().__init__()
+
         self.file1_path = ""
         self.file2_path = ""
         self.sheet1_name = None
         self.sheet2_name = None
         self.primary_key_columns = []
         self.ignore_columns = []
-        
+
         self.comparator = None
         self.comparison_result = None
-        
+
         self._setup_ui()
     
     def on_activate(self):
@@ -704,25 +714,9 @@ class ExcelComparisonPlugin(BasePlugin):
         """
         设置UI界面
         """
-        # 创建主滚动区域
-        main_scroll = QScrollArea(self)
-        main_scroll.setWidgetResizable(True)
-        main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        # 创建滚动区域内的主widget
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("pluginContainer")
-        layout = QVBoxLayout(scroll_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        # 设置主布局
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-        main_layout.addWidget(main_scroll)
-        main_scroll.setWidget(scroll_widget)
-        
+        # 使用基类提供的内容布局
+        layout = self.get_content_layout()
+
         # 文件选择区域
         file_group = QGroupBox("选择文件")
         file_group.setStyleSheet("""
@@ -1004,38 +998,7 @@ class ExcelComparisonPlugin(BasePlugin):
         layout.addWidget(self.result_widget)
         
         # 添加插件说明
-        self.description_expanded = False  # 展开状态标记
-        
-        # 创建说明标题和展开/收起按钮
-        description_header_layout = QHBoxLayout()
-        
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f8f9fa;
-                color: #343a40;
-                border: 1px solid #dee2e6;
-                padding: 4px 8px;
-                font-size: 12px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #e9ecef;
-            }
-        """)
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-        
-        # 创建说明内容区域
-        self.description_text = QTextEdit()
-        self.description_text.setReadOnly(True)
-        self.description_text.setStyleSheet("font-size: 13px; padding: 10px;")
-        self.description_text.setHtml("""
+        description_html = """
             <h3>Excel表格对比插件功能介绍</h3>
             <ul>
                 <li><strong>文件对比</strong>：支持对比两个Excel文件，识别数据变化</li>
@@ -1062,31 +1025,13 @@ class ExcelComparisonPlugin(BasePlugin):
                 </li>
                 <li><strong>报告生成</strong>：自动生成详细的对比报告</li>
             </ul>
-        """)
-        
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_text)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.description_scroll.setMaximumHeight(300)
-        self.description_scroll.setFixedHeight(50)  # 默认收起高度
-        
+        """
+
+        description_header_layout, _, _, description_scroll = self.create_description_section(description_html)
+
         # 添加到主布局
         layout.addLayout(description_header_layout)
-        layout.addWidget(self.description_scroll)
-    
-    def toggle_description(self):
-        """
-        切换插件说明的展开/收起状态
-        """
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)  # 收起高度
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(300)  # 展开高度
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
+        layout.addWidget(description_scroll)
     
     def select_file1(self):
         """

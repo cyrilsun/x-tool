@@ -230,9 +230,16 @@ class ExcelSplitPlugin(BasePlugin):
     Excel拆分插件
     提供多种Excel文件拆分方式
     """
+    PLUGIN_INFO = {
+        "name": "表格拆分",
+        "description": "将Excel文件按行、按列或按字段值拆分为多个文件",
+        "version": "1.0.0",
+        "category": "表格工具"
+    }
+
     def __init__(self):
-        super().__init__("表格拆分", "将Excel文件按行、按列或按字段值拆分为多个文件")
-        
+        super().__init__()
+
         self.source_file = ""  # 源文件路径
         self.output_dir = ""    # 输出目录
         self.split_method = "rows"  # 拆分方式："rows", "columns", "field"
@@ -241,30 +248,16 @@ class ExcelSplitPlugin(BasePlugin):
         self.split_field = ""    # 用于拆分的字段名
         self.preserve_header = True  # 是否保留表头
         self.available_fields = []  # 可用字段列表
-        
+
         self._setup_ui()
     
     def _setup_ui(self):
         """
         设置插件UI界面
         """
-        # 创建主布局
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-        
-        # 创建滚动区域
-        self.main_scroll = QScrollArea()
-        self.main_scroll.setWidgetResizable(True)
-        self.main_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        
-        # 创建容器组件
-        container = QWidget()
-        container.setObjectName("pluginContainer")
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
+        # 使用基类提供的内容布局
+        layout = self.get_content_layout()
+
         # 源文件选择
         source_group = QGroupBox("选择源文件")
         source_layout = QVBoxLayout()
@@ -485,10 +478,6 @@ class ExcelSplitPlugin(BasePlugin):
         # 添加到主布局
         layout.addLayout(description_header_layout)
         layout.addWidget(self.description_scroll)
-        
-        # 设置滚动区域
-        self.main_scroll.setWidget(container)
-        main_layout.addWidget(self.main_scroll)
     
     def select_source_file(self):
         """
