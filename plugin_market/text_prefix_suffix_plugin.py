@@ -118,33 +118,16 @@ class TextPrefixSuffixPlugin(BasePlugin):
         layout.addLayout(btn_layout)
 
         # 4. 插件说明
-        self.description_expanded = False
-        description_header_layout = QHBoxLayout()
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("background-color: #f8f9fa; color: #343a40; border: 1px solid #dee2e6; padding: 4px 8px; font-size: 12px; border-radius: 4px;")
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-        
-        self.description_content = QTextEdit()
-        self.description_content.setReadOnly(True)
-        self.description_content.setHtml("""
+        description_html = """
             <p><strong>批量添加前后缀工具</strong> 用于快速美化或格式化多行文本：</p>
             <ul>
                 <li><strong>逐行处理</strong>：自动识别文本行，并为每一行（包括非空行）添加指定内容。</li>
                 <li><strong>实时预览</strong>：输入前后缀并点击转换即可看到结果。</li>
                 <li><strong>灵活应用</strong>：常用于生成 SQL In 查询列表、格式化日志、代码生成等场景。</li>
             </ul>
-        """)
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_content)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.description_scroll.setFixedHeight(50)
-        
-        layout.addLayout(description_header_layout)
+        """
+        header_layout, self.description_content, self.toggle_description_btn, self.description_scroll = self.create_description_section(description_html)
+        layout.addLayout(header_layout)
         layout.addWidget(self.description_scroll)
 
     def _get_group_box_qss(self):
@@ -198,16 +181,6 @@ class TextPrefixSuffixPlugin(BasePlugin):
             QPushButton {{ background-color: {normal_color}; color: white; border: none; padding: 10px 24px; font-size: 14px; font-weight: bold; border-radius: 4px; }}
             QPushButton:hover {{ background-color: {hover_color}; }}
         """
-
-    def toggle_description(self):
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(150)
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
 
     def process_text(self):
         """添加前后缀核心逻辑"""

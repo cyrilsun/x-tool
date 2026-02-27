@@ -153,34 +153,27 @@ class XmlJsonConverterPlugin(BasePlugin):
         btn_layout.addWidget(self.clear_btn)
         layout.addLayout(btn_layout)
 
-        # 4. 插件说明
-        self.description_expanded = False
-        description_header_layout = QHBoxLayout()
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("background-color: #f8f9fa; color: #343a40; border: 1px solid #dee2e6; padding: 4px 8px; font-size: 12px; border-radius: 4px;")
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-        
-        self.description_content = QPlainTextEdit()
-        self.description_content.setReadOnly(True)
-        self.description_content.setPlainText(
-            "XML/JSON互转工具说明：\n"
-            "1. XML 转 JSON：解析 XML 结构并生成对应的 JSON 格式，支持处理属性及嵌套标签。\n"
-            "2. JSON 转 XML：将 JSON 对象转为 XML 结构，根节点默认使用 'root' 或首个键名。\n"
-            "3. PRETTY：勾选后输出将包含缩进，方便阅读；不勾选则输出紧凑型文本。\n"
-            "4. 容错提示：如果输入的数据格式不符合规范，插件会给出具体的错误原因。"
-        )
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_content)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.description_scroll.setFixedHeight(50)
-        
-        layout.addLayout(description_header_layout)
-        layout.addWidget(self.description_scroll)
+        # 4. 插件说明（使用标准化方法）
+        description_html = """
+        <h4>功能说明</h4>
+        <ul>
+            <li><strong>XML 转 JSON：</strong>解析 XML 结构并生成对应的 JSON 格式，支持处理属性及嵌套标签。</li>
+            <li><strong>JSON 转 XML：</strong>将 JSON 对象转为 XML 结构，根节点默认使用 'root' 或首个键名。</li>
+            <li><strong>PRETTY 选项：</strong>勾选后输出将包含缩进，方便阅读；不勾选则输出紧凑型文本。</li>
+            <li><strong>容错提示：</strong>如果输入的数据格式不符合规范，插件会给出具体的错误原因。</li>
+        </ul>
+        <h4>使用方法</h4>
+        <ol>
+            <li>在输入框中粘贴 XML 或 JSON 数据，或点击"XML样例"/"JSON样例"快速填充测试数据。</li>
+            <li>点击"XML转换为JSON"或"JSON转换为XML"按钮进行转换。</li>
+            <li>使用"复制结果"按钮将转换结果复制到剪贴板。</li>
+            <li>使用"清空"按钮清除所有内容。</li>
+        </ol>
+        """
+
+        description_header, description_content, toggle_btn, description_scroll = self.create_description_section(description_html)
+        layout.addLayout(description_header)
+        layout.addWidget(description_scroll)
 
     def _get_editor_qss(self):
         return """
@@ -211,16 +204,6 @@ class XmlJsonConverterPlugin(BasePlugin):
                 background-color: {hover_color}; 
             }}
         """
-
-    def toggle_description(self):
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(120)
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
 
     def clear_all(self):
         self.input_editor.clear()

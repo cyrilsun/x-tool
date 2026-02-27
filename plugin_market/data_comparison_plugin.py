@@ -586,39 +586,8 @@ class DataComparisonPlugin(BasePlugin):
         
         layout.addWidget(self.result_widget)
         
-        # 添加插件说明
-        self.description_expanded = False  # 展开状态标记
-        
-        # 创建说明标题和展开/收起按钮
-        description_header_layout = QHBoxLayout()
-        
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f8f9fa;
-                color: #343a40;
-                border: 1px solid #dee2e6;
-                padding: 4px 8px;
-                font-size: 12px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #e9ecef;
-            }
-        """)
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-        
-        # 创建说明内容区域
-        self.description_text = QTextEdit()
-        self.description_text.setReadOnly(True)
-        self.description_text.setStyleSheet("font-size: 13px; padding: 10px;")
-        self.description_text.setHtml("""
+        # 添加插件说明（使用基类方法，自动包含元数据）
+        html_content = """
             <h3>数据对比插件功能介绍</h3>
             <p><strong>使用流程：</strong></p>
             <ol>
@@ -642,32 +611,14 @@ class DataComparisonPlugin(BasePlugin):
                 <li>自动勾选已执行操作对应的导出选项</li>
                 <li>导出包含原始数据和处理结果的Excel报告</li>
             </ul>
-        """)
-        
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_text)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.description_scroll.setMaximumHeight(300)
-        self.description_scroll.setFixedHeight(50)  # 默认收起高度
-        
+        """
+
+        description_header, description_text, toggle_btn, description_scroll = self.create_description_section(html_content)
+
         # 添加到主布局
-        layout.addLayout(description_header_layout)
-        layout.addWidget(self.description_scroll)
-    
-    def toggle_description(self):
-        """
-        切换插件说明的展开/收起状态
-        """
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)  # 收起高度
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(300)  # 展开高度
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
-    
+        layout.addLayout(description_header)
+        layout.addWidget(description_scroll)
+
     def select_file(self):
         """
         选择Excel文件

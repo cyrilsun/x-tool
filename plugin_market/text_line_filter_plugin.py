@@ -109,33 +109,16 @@ class TextLineFilterPlugin(BasePlugin):
         layout.addWidget(odd_group)
         layout.addWidget(even_group)
 
-        # 4. 插件说明
-        self.description_expanded = False
-        description_header_layout = QHBoxLayout()
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("background-color: #f8f9fa; color: #343a40; border: 1px solid #dee2e6; padding: 4px 8px; font-size: 12px; border-radius: 4px;")
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-        
-        self.description_content = QTextEdit()
-        self.description_content.setReadOnly(True)
-        self.description_content.setHtml("""
+        # 4. 插件说明（使用基类方法，自动显示元数据）
+        description_html = """
             <p><strong>筛选奇偶行工具</strong> 用于从文本中快速分离出奇数行和偶数行：</p>
             <ul>
                 <li><strong>筛选规则</strong>：第1, 3, 5...行为奇数行；第2, 4, 6...行为偶数行。</li>
                 <li><strong>空行处理</strong>：文本中的空行也会被计入行数。</li>
                 <li><strong>快速复制</strong>：支持一键单独复制奇数行或偶数行内容。</li>
             </ul>
-        """)
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_content)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.description_scroll.setFixedHeight(50)
-        
+        """
+        description_header_layout, _, _, self.description_scroll = self.create_description_section(description_html)
         layout.addLayout(description_header_layout)
         layout.addWidget(self.description_scroll)
 
@@ -176,16 +159,6 @@ class TextLineFilterPlugin(BasePlugin):
             QPushButton {{ background-color: {normal_color}; color: white; border: none; padding: 10px 20px; font-size: 13px; font-weight: bold; border-radius: 4px; }}
             QPushButton:hover {{ background-color: {hover_color}; }}
         """
-
-    def toggle_description(self):
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(120)
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
 
     def filter_lines(self):
         """筛选核心逻辑"""

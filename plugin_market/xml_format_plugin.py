@@ -2,10 +2,9 @@ import os
 import xml.dom.minidom
 import re
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGroupBox,
-    QMessageBox, QWidget, QScrollArea, QPlainTextEdit, QFrame, QApplication
+    QHBoxLayout, QPushButton, QLabel,
+    QMessageBox, QWidget, QPlainTextEdit, QApplication
 )
-from PyQt6.QtCore import Qt
 from src.plugins.base_plugin import BasePlugin
 from src.utils.logger import logger
 
@@ -87,60 +86,35 @@ class XmlFormatPlugin(BasePlugin):
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
-        # 4. 插件说明
-        self.description_expanded = False
-        description_header_layout = QHBoxLayout()
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("background-color: #f8f9fa; color: #343a40; border: 1px solid #dee2e6; padding: 4px 8px; font-size: 12px; border-radius: 4px;")
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-        
-        self.description_content = QPlainTextEdit()
-        self.description_content.setReadOnly(True)
-        self.description_content.setPlainText(
-            "XML格式化工具：\n"
-            "1. 格式化：将压缩或凌乱的 XML 字符串转为缩进整齐的易读格式。\n"
-            "2. 压缩：去除 XML 标签之间的空格、换行和缩进，减小体积。\n"
-            "3. 兼容性：支持处理包含 XML 声明和不同字符编码的文本。\n"
-            "4. 报错：如果 XML 语法有误，会弹出详细提示。"
-        )
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_content)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.description_scroll.setFixedHeight(50)
-        
-        layout.addLayout(description_header_layout)
+        # 4. 插件说明 (使用 BasePlugin 辅助方法)
+        description_html = """
+            <p><strong>XML格式化工具</strong> 是一款实用的 XML 数据处理工具，支持格式化排版与压缩。</p>
+            <ul>
+                <li><strong>格式化</strong>：将压缩或凌乱的 XML 字符串转为缩进整齐的易读格式。</li>
+                <li><strong>压缩</strong>：去除 XML 标签之间的空格、换行和缩进，减小体积。</li>
+                <li><strong>兼容性</strong>：支持处理包含 XML 声明和不同字符编码的文本。</li>
+                <li><strong>错误提示</strong>：如果 XML 语法有误，会弹出详细提示。</li>
+            </ul>
+        """
+        header_layout, self.description_content, self.toggle_description_btn, self.description_scroll = self.create_description_section(description_html)
+        layout.addLayout(header_layout)
         layout.addWidget(self.description_scroll)
 
     def _get_btn_qss(self, normal_color, hover_color):
         return f"""
-            QPushButton {{ 
-                background-color: {normal_color}; 
-                color: white; 
-                border: none; 
-                padding: 10px 24px; 
-                font-size: 14px; 
-                font-weight: bold; 
-                border-radius: 4px; 
+            QPushButton {{
+                background-color: {normal_color};
+                color: white;
+                border: none;
+                padding: 10px 24px;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 4px;
             }}
-            QPushButton:hover {{ 
-                background-color: {hover_color}; 
+            QPushButton:hover {{
+                background-color: {hover_color};
             }}
         """
-
-    def toggle_description(self):
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(120)
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
 
     def format_xml(self):
         """XML 格式化排版"""

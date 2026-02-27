@@ -426,39 +426,9 @@ class ExcelSplitPlugin(BasePlugin):
         split_layout.addWidget(self.split_btn)
         
         layout.addLayout(split_layout)
-        
-        # 添加插件说明
-        self.description_expanded = False  # 展开状态标记
-        
-        # 创建说明标题和展开/收起按钮
-        description_header_layout = QHBoxLayout()
-        
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f8f9fa;
-                color: #343a40;
-                border: 1px solid #dee2e6;
-                padding: 4px 8px;
-                font-size: 12px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #e9ecef;
-            }
-        """)
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-        
-        # 创建说明内容区域
-        self.description_text = QTextEdit()
-        self.description_text.setReadOnly(True)
-        self.description_text.setHtml("""
+
+        # 添加插件说明（使用基类的标准方法）
+        html_content = """
             <h3>Excel拆分插件功能介绍</h3>
             <ul>
                 <li><strong>按行数拆分</strong>：将Excel文件按指定行数拆分为多个文件</li>
@@ -467,17 +437,11 @@ class ExcelSplitPlugin(BasePlugin):
                 <li><strong>保留表头</strong>：可选择是否在每个拆分后的文件中保留表头</li>
                 <li><strong>自定义输出目录</strong>：可选择拆分后文件的保存位置</li>
             </ul>
-        """)
-        
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_text)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setMaximumHeight(300)
-        self.description_scroll.setFixedHeight(100)  # 默认高度
-        
-        # 添加到主布局
-        layout.addLayout(description_header_layout)
-        layout.addWidget(self.description_scroll)
+        """
+
+        description_header, description_text, toggle_btn, description_scroll = self.create_description_section(html_content)
+        layout.addLayout(description_header)
+        layout.addWidget(description_scroll)
     
     def select_source_file(self):
         """
@@ -671,20 +635,7 @@ class ExcelSplitPlugin(BasePlugin):
             msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg_box.button(QMessageBox.StandardButton.Ok).setText("确定")
             msg_box.exec()
-    
-    def toggle_description(self):
-        """
-        切换插件说明的展开/收起状态
-        """
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)  # 收起高度
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(300)  # 展开高度
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
-    
+
     def get_widget(self) -> QWidget:
         """
         获取插件的UI组件

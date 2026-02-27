@@ -89,35 +89,18 @@ class JsonFormatPlugin(BasePlugin):
         layout.addLayout(btn_layout)
 
         # 4. 插件说明
-        from PyQt6.QtWidgets import QTextEdit, QScrollArea, QFrame
-        self.description_expanded = False
-        description_header_layout = QHBoxLayout()
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("background-color: #f8f9fa; color: #343a40; border: 1px solid #dee2e6; padding: 4px 8px; font-size: 12px; border-radius: 4px;")
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-
-        self.description_content = QPlainTextEdit()
-        self.description_content.setProperty("isDescriptionArea", True)  # 标记为说明区域，保留滚动条
-        self.description_content.setReadOnly(True)
-        self.description_content.setPlainText(
-            "JSON格式化工具：\n"
-            "1. 格式化：将凌乱的 JSON 字符串转为缩进整齐（4空格）的易读格式。\n"
-            "2. 压缩：去除 JSON 中的所有空格和换行，减小体积。\n"
-            "3. 兼容性：支持包含中文等非 ASCII 字符的处理。\n"
-            "4. 容错：如果 JSON 格式有误，会弹出错误提示并准确定位原因。"
-        )
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_content)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.description_scroll.setFixedHeight(50)
-
-        layout.addLayout(description_header_layout)
-        layout.addWidget(self.description_scroll)
+        description_html = """
+            <h3>JSON格式化工具</h3>
+            <ul>
+                <li><strong>格式化</strong>：将凌乱的 JSON 字符串转为缩进整齐（4空格）的易读格式。</li>
+                <li><strong>压缩</strong>：去除 JSON 中的所有空格和换行，减小体积。</li>
+                <li><strong>兼容性</strong>：支持包含中文等非 ASCII 字符的处理。</li>
+                <li><strong>容错</strong>：如果 JSON 格式有误，会弹出错误提示并准确定位原因。</li>
+            </ul>
+        """
+        header_layout, content_text, toggle_btn, scroll_area = self.create_description_section(description_html)
+        layout.addLayout(header_layout)
+        layout.addWidget(scroll_area)
 
     def _get_btn_qss(self, normal_color, hover_color):
         return f"""
@@ -134,16 +117,6 @@ class JsonFormatPlugin(BasePlugin):
                 background-color: {hover_color}; 
             }}
         """
-
-    def toggle_description(self):
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(120)
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
 
     def format_json(self):
         """JSON 格式化排版"""

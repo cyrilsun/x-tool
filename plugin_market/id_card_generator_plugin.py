@@ -331,20 +331,8 @@ class IdCardGeneratorPlugin(BasePlugin):
         result_group.setLayout(result_layout)
         layout.addWidget(result_group)
 
-        # 4. 插件说明
-        self.description_expanded = False
-        description_header_layout = QHBoxLayout()
-        description_title = QLabel("<h3 style='margin: 0;'>插件说明</h3>")
-        self.toggle_description_btn = QPushButton("▼ 展开")
-        self.toggle_description_btn.setStyleSheet("background-color: #f8f9fa; color: #343a40; border: 1px solid #dee2e6; padding: 4px 8px; font-size: 12px; border-radius: 4px;")
-        self.toggle_description_btn.clicked.connect(self.toggle_description)
-        description_header_layout.addWidget(description_title)
-        description_header_layout.addStretch()
-        description_header_layout.addWidget(self.toggle_description_btn)
-        
-        self.description_content = QTextEdit()
-        self.description_content.setReadOnly(True)
-        self.description_content.setHtml("""
+        # 4. 插件说明 (使用标准化方法，自动包含元数据)
+        description_html = """
             <p><strong>身份证号码生成器</strong> 用于生成符合 GB11643-1999 标准的 18 位身份证号码。</p>
             <ul>
                 <li><strong>行政区划</strong>：支持从外部加载完整数据。若需使用完整数据，请在插件目录下放置 <code>area_data.json</code>。</li>
@@ -352,15 +340,10 @@ class IdCardGeneratorPlugin(BasePlugin):
                 <li><strong>校验位计算</strong>：严格按照 ISO 7064:1983.MOD 11-2 算法。</li>
             </ul>
             <p><span style='color: #e74c3c;'>注：本工具仅用于软件开发和测试目的，生成的号码不具有法律效力。</span></p>
-        """)
-        self.description_scroll = QScrollArea()
-        self.description_scroll.setWidget(self.description_content)
-        self.description_scroll.setWidgetResizable(True)
-        self.description_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.description_scroll.setFixedHeight(50)
-        
-        layout.addLayout(description_header_layout)
-        layout.addWidget(self.description_scroll)
+        """
+        description_header, _, _, description_scroll = self.create_description_section(description_html)
+        layout.addLayout(description_header)
+        layout.addWidget(description_scroll)
 
         # 初始化数据
         self._update_cities()
@@ -378,16 +361,6 @@ class IdCardGeneratorPlugin(BasePlugin):
         self.district_combo.clear()
         if province in self.area_data and city in self.area_data[province]:
             self.district_combo.addItems(self.area_data[province][city].keys())
-
-    def toggle_description(self):
-        if self.description_expanded:
-            self.description_scroll.setFixedHeight(50)
-            self.toggle_description_btn.setText("▼ 展开")
-            self.description_expanded = False
-        else:
-            self.description_scroll.setFixedHeight(180)
-            self.toggle_description_btn.setText("▲ 收起")
-            self.description_expanded = True
 
     def calculate_check_digit(self, id17):
         """计算第18位校验码"""
