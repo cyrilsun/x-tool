@@ -10,7 +10,7 @@
 - 📦 **依赖隔离**：完整的 `.xpkg` 插件包方案，支持 lib 依赖与插件数据同步导入导出。
 - 📂 **灵活管理**：支持自定义文件夹分类，左侧工具栏支持模糊搜索与即时定位。
 - 🔄 **备份恢复**：提供一键备份/恢复功能，保障插件与配置数据的安全迁移。
-- 🎨 **极致简洁**：采用浅色现代 UI 风格，原生流畅，极速启动。
+- 🎨 **主题系统**：内置浅色/深色主题，支持运行时切换。
 
 ## 🛠️ 技术栈
 
@@ -50,40 +50,59 @@ chmod +x install_plugin_deps.sh
 python main.py
 ```
 
+---
+
 ## 🔌 插件开发
 
-在 `plugins` 目录下创建独立的 `.py` 文件即可快速扩展。
+在 `plugins` 目录下创建独立的 `.py` 文件即可扩展功能。所有插件必须继承 `BasePlugin` 基类。
 
-### 基础结构示例：
+**滚动条已自动统一**：`BasePlugin` 自动设置统一的滚动条布局，无需手动创建。
 
-plugins目录下开发插件，每个插件为一个独立的.py文件。基础结构如下：
+### 快速开始
 
-### 插件开发
-plugins目录下开发插件，每个插件为一个独立的.py文件。基础结构如下：
 ```python
-from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QLabel
 from src.plugins.base_plugin import BasePlugin
 
-class MyNewPlugin(BasePlugin):
+class MyPlugin(BasePlugin):
+    PLUGIN_INFO = {
+        "name": "我的插件",
+        "description": "插件描述",
+    }
+
     def __init__(self):
-        super().__init__("我的新插件", "这是一个新插件的描述")
+        super().__init__()
         self._setup_ui()
 
-    def _setup_ui(self):
-        layout = QVBoxLayout(self)
-        label = QLabel("这是我的新插件内容")
-        layout.addWidget(label)
-
-        button = QPushButton("点击测试")
-        button.clicked.connect(self.on_button_clicked)
-        layout.addWidget(button)
-
-    def on_button_clicked(self):
-        print("插件按钮被点击了！")
-
-    def get_widget(self) -> "MyNewPlugin":
+    def get_widget(self):
         return self
 
-    def on_activate(self):
-        print("我的新插件被激活了！")
+    def _setup_ui(self):
+        # 直接获取已创建的内容布局，滚动条已自动设置
+        layout = self.get_content_layout()
+        layout.addWidget(QLabel("Hello, World!"))
 ```
+
+### 核心 API
+
+| 类别 | 方法 | 说明 |
+|------|------|------|
+| **必须** | `get_widget()` | 返回插件主 Widget |
+| **布局** | `get_content_layout()` | 获取内容布局（滚动条已自动设置） |
+| **UI** | `create_group_box(title)` | 创建分组框 |
+| **UI** | `create_button(text, type)` | 创建按钮 |
+| **UI** | `create_description_section(html)` | 创建可折叠说明区 |
+| **工具** | `show_info/warning/error(msg)` | 显示提示框 |
+| **工具** | `log_info/debug/error(msg)` | 记录日志 |
+
+### 按钮样式类型
+
+`create_button()` 支持的样式：`primary`(蓝) / `success`(绿) / `warning`(橙) / `danger`(红) / `info`(灰) / `secondary`(浅灰)
+
+### 完整示例
+
+查看 `plugins/uuid_generator_plugin.py` 或使用 `plugins/_plugin_template.py` 模板。
+
+📖 **详细文档**: [插件开发指南.md](docs/插件开发指南.md)
+
+---

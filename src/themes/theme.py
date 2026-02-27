@@ -133,14 +133,29 @@ class Theme:
             QLabel {{
                 color: {Theme.COLOR_TEXT_SECONDARY};
             }}
-            QLineEdit, QComboBox, QSpinBox, QTextEdit {{
+            QLineEdit, QComboBox, QSpinBox {{
                 border: 1px solid {Theme.COLOR_BORDER};
                 border-radius: 4px;
                 padding: 6px 10px;
                 background-color: {Theme.COLOR_BG_WHITE};
             }}
-            QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QTextEdit:focus {{
+            QLineEdit:focus, QComboBox:focus, QSpinBox:focus {{
                 border: 1px solid {Theme.COLOR_BORDER_FOCUS};
+            }}
+            /* QTextEdit 和 QPlainTextEdit 禁用内部滚动条，使用外层滚动 */
+            QTextEdit, QPlainTextEdit {{
+                border: 1px solid {Theme.COLOR_BORDER};
+                border-radius: 4px;
+                padding: 6px 10px;
+                background-color: {Theme.COLOR_BG_WHITE};
+            }}
+            QTextEdit:focus, QPlainTextEdit:focus {{
+                border: 1px solid {Theme.COLOR_BORDER_FOCUS};
+            }}
+            /* 禁用 QTextEdit 和 QPlainTextEdit 的垂直和水平滚动条 */
+            QTextEdit QScrollBar, QPlainTextEdit QScrollBar {{
+                height: 0px;
+                width: 0px;
             }}
             QPushButton {{
                 background-color: {Theme.COLOR_PRIMARY};
