@@ -334,7 +334,7 @@ class BasePlugin(QWidget, ABC, metaclass=_BasePluginMeta):
 
     def create_description_section(self, html_content: str) -> tuple:
         """
-        创建可折叠的插件说明区域
+        创建可折叠的插件说明区域（自动包含元数据）
 
         Args:
             html_content: 说明内容的 HTML 文本
@@ -357,10 +357,13 @@ class BasePlugin(QWidget, ABC, metaclass=_BasePluginMeta):
         header_layout.addStretch()
         header_layout.addWidget(toggle_btn)
 
+        # 构建完整内容（元数据 + 说明）
+        full_content = self._build_description_content(html_content)
+
         # 内容区域
         content_text = QTextEdit()
         content_text.setReadOnly(True)
-        content_text.setHtml(html_content)
+        content_text.setHtml(full_content)
 
         scroll_area = QScrollArea()
         scroll_area.setWidget(content_text)
@@ -369,6 +372,44 @@ class BasePlugin(QWidget, ABC, metaclass=_BasePluginMeta):
         scroll_area.setFixedHeight(50)  # 默认收起状态
 
         return header_layout, content_text, toggle_btn, scroll_area
+
+    def _build_description_content(self, html_content: str) -> str:
+        """
+        构建包含元数据的完整说明内容
+
+        Args:
+            html_content: 原始说明内容
+
+        Returns:
+            完整的 HTML 内容（包含元数据）
+        """
+        # 构建元数据 HTML
+        metadata_parts = []
+        if self.version:
+            metadata_parts.append(f"<strong>版本:</strong> {self.version}")
+        if self.author:
+            metadata_parts.append(f"<strong>作者:</strong> {self.author}")
+        if self.category:
+            metadata_parts.append(f"<strong>分类:</strong> {self.category}")
+
+        # 检查当前是否为深色主题
+        from src.themes.simple_theme_manager import get_theme_manager
+        is_dark = get_theme_manager().is_dark_mode()
+
+        # 根据主题选择背景色
+        bg_color = "#4e5254" if is_dark else "#f1f2f6"
+        text_color = "#a9b7c6" if is_dark else "#2c3e50"
+
+        metadata_html = ""
+        if metadata_parts:
+            metadata_html = f"""
+                <div style='background-color: {bg_color}; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; color: {text_color};'>
+                    {" | ".join(metadata_parts)}
+                </div>
+            """
+
+        # 组合元数据和说明内容
+        return f"{metadata_html}{html_content}"
 
     def _toggle_description(self, scroll_area: QScrollArea, btn: QPushButton,
                            expanded_height: int = 180):

@@ -91,9 +91,22 @@ class MyPlugin(BasePlugin):
 | **布局** | `get_content_layout()` | 获取内容布局（滚动条已自动设置） |
 | **UI** | `create_group_box(title)` | 创建分组框 |
 | **UI** | `create_button(text, type)` | 创建按钮 |
-| **UI** | `create_description_section(html)` | 创建可折叠说明区 |
+| **UI** | `create_description_section(html)` | 创建可折叠说明区（**自动显示元数据**） |
 | **工具** | `show_info/warning/error(msg)` | 显示提示框 |
 | **工具** | `log_info/debug/error(msg)` | 记录日志 |
+
+### 插件元数据 (PLUGIN_INFO)
+
+插件元数据会在**插件说明区域顶部**自动显示：
+
+| 字段 | 说明 | 示例 |
+|------|------|------|
+| `name` | 插件名称（必需） | `"UUID生成"` |
+| `description` | 插件描述（必需） | `"批量生成通用唯一识别码"` |
+| `version` | 版本号 | `"1.0.0"` → 显示为 "版本: 1.0.0" |
+| `author` | 作者 | `"X-Tool"` → 显示为 "作者: X-Tool" |
+| `category` | 分类 | `"开发工具"` → 显示为 "分类: 开发工具" |
+| `icon` | 图标名（可选） | 预留字段 |
 
 ### 按钮样式类型
 
