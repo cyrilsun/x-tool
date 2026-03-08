@@ -75,28 +75,40 @@ if __name__ == "__main__":
         from PyQt6.QtGui import QIcon
         app.setWindowIcon(QIcon(icon_path))
 
-    window = MainWindow()
-    window.setWindowTitle(f"X-Tool v{VERSION}")
-    
-    # 设置窗口属性
-    window.setObjectName("XToolMainWindow")
-    
-    # 在macOS上使用原生菜单系统
-    if sys.platform == 'darwin':
-        window.menuBar().setNativeMenuBar(True)
+    try:
+        window = MainWindow()
+        window.setWindowTitle(f"X-Tool v{VERSION}")
+        
+        # 设置窗口属性
+        window.setObjectName("XToolMainWindow")
+        
+        # 在macOS上使用原生菜单系统
+        if sys.platform == 'darwin':
+            window.menuBar().setNativeMenuBar(True)
 
-    load_plugins(window)
+        logger.info("[main] 开始加载插件...")
+        load_plugins(window)
+        logger.info("[main] 插件加载完成")
 
-    # 插件加载完成后，刷新首页插件列表
-    if hasattr(window.welcome_page_manager, 'home_page') and window.welcome_page_manager.home_page:
-        window.welcome_page_manager.home_page.refresh_plugins()
+        # 插件加载完成后，刷新首页插件列表
+        logger.info("[main] 开始刷新首页...")
+        if hasattr(window.welcome_page_manager, 'home_page') and window.welcome_page_manager.home_page:
+            window.welcome_page_manager.home_page.refresh_plugins()
+        logger.info("[main] 首页刷新完成")
 
-    # 默认选中首页
-    # 获取首页项
-    home_item = window.tool_list_widget.topLevelItem(0)  # 首页是第一个顶层项
-    if home_item:
-        window.tool_list_widget.setCurrentItem(home_item)
+        # 默认选中首页
+        # 获取首页项
+        home_item = window.tool_list_widget.topLevelItem(0)  # 首页是第一个顶层项
+        if home_item:
+            window.tool_list_widget.setCurrentItem(home_item)
 
-    window.show()
+        logger.info("[main] 显示主窗口...")
+        window.show()
+        logger.info("[main] 主窗口已显示")
 
-    sys.exit(app.exec())
+        sys.exit(app.exec())
+    except Exception as e:
+        logger.error(f"[main] 程序启动失败: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise
