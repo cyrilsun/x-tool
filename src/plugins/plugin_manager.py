@@ -20,8 +20,14 @@ from src.themes.simple_theme_manager import get_theme_manager
 def load_plugins(window):
     """加载并注册所有插件"""
     plugin_dir = get_plugin_directory()
+    logger.info(f"[load_plugins] 插件目录: {plugin_dir}")
+    logger.info(f"[load_plugins] 插件目录存在: {os.path.exists(plugin_dir)}")
+    if os.path.exists(plugin_dir):
+        logger.info(f"[load_plugins] 插件目录内容: {os.listdir(plugin_dir)}")
     loader = PluginLoader(plugin_dir)
     plugins = loader.load_all_plugins()
+    
+    logger.info(f"[load_plugins] 从目录加载了 {len(plugins)} 个插件")
 
     # 获取当前主题
     current_theme = get_theme_manager().get_current_theme()
