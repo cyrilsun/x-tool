@@ -3,8 +3,8 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QPushButton, QGridLayout,
                              QFrame, QSizePolicy, QScrollArea)
+from PyQt6 import sip
 
-import sip
 from src.db.database import Database
 from src.utils.logger import logger
 
