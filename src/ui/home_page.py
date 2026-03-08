@@ -399,16 +399,22 @@ class HomePage(QWidget):
         
     def refresh_plugins(self):
         """刷新插件列表 - 与左侧列表保持同步"""
+        logger.info("[refresh_plugins] 开始刷新")
         self.load_plugins()
         # 同时刷新分类按钮
         self.load_categories_from_sidebar()
+        logger.info("[refresh_plugins] 刷新完成")
             
     def calculate_columns(self):
         """根据窗口宽度计算每行显示的卡片数量"""
         # 卡片最小宽度260 + 间距16 = 276
         card_width = 276
         # 左右边距各40
-        available_width = self.cards_container.width() - 80
+        container_width = self.cards_container.width()
+        # 如果容器还未显示，使用默认宽度
+        if container_width <= 0:
+            container_width = 800  # 默认宽度
+        available_width = container_width - 80
         # 计算列数（至少1列，最多4列）
         cols = max(1, min(available_width // card_width, 4))
         return cols
@@ -425,42 +431,52 @@ class HomePage(QWidget):
         
     def refresh_cards(self):
         """刷新插件卡片显示"""
-        # 清除现有卡片
-        while self.cards_layout.count():
-            item = self.cards_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        
-        # 筛选插件
-        filtered_plugins = self.filter_plugins()
-        
-        # 根据窗口宽度计算列数
-        max_cols = self.calculate_columns()
-        
-        # 创建卡片
-        row, col = 0, 0
-        
-        for plugin in filtered_plugins:
-            # 判断是否为热门插件（可以根据使用频率或其他规则）
-            is_hot = plugin["name"] in ["Excel对比", "Excel合并", "文本去重", "JSON格式化"]
+        try:
+            logger.info(f"[refresh_cards] 开始刷新卡片，插件数量: {len(self.plugins)}")
+            # 清除现有卡片
+            while self.cards_layout.count():
+                item = self.cards_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
             
-            # 获取图标
-            icon = self.get_plugin_icon(plugin["name"])
+            # 筛选插件
+            filtered_plugins = self.filter_plugins()
+            logger.info(f"[refresh_cards] 筛选后插件数量: {len(filtered_plugins)}")
             
-            card = PluginCard(
-                plugin_name=plugin["name"],
-                description=plugin["description"],
-                icon_text=icon,
-                is_hot=is_hot
-            )
-            card.clicked.connect(self.on_card_clicked)
+            # 根据窗口宽度计算列数
+            max_cols = self.calculate_columns()
+            logger.info(f"[refresh_cards] 计算列数: {max_cols}")
             
-            self.cards_layout.addWidget(card, row, col)
+            # 创建卡片
+            row, col = 0, 0
             
-            col += 1
-            if col >= max_cols:
-                col = 0
-                row += 1
+            for plugin in filtered_plugins:
+                # 判断是否为热门插件（可以根据使用频率或其他规则）
+                is_hot = plugin["name"] in ["Excel对比", "Excel合并", "文本去重", "JSON格式化"]
+                
+                # 获取图标
+                icon = self.get_plugin_icon(plugin["name"])
+                
+                card = PluginCard(
+                    plugin_name=plugin["name"],
+                    description=plugin["description"],
+                    icon_text=icon,
+                    is_hot=is_hot
+                )
+                card.clicked.connect(self.on_card_clicked)
+                
+                self.cards_layout.addWidget(card, row, col)
+                
+                col += 1
+                if col >= max_cols:
+                    col = 0
+                    row += 1
+            
+            logger.info(f"[refresh_cards] 刷新完成，创建了 {len(filtered_plugins)} 个卡片")
+        except Exception as e:
+            logger.error(f"[refresh_cards] 刷新卡片失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
                 
     def filter_plugins(self):
         """根据搜索和分类筛选插件"""
