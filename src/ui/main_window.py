@@ -16,6 +16,7 @@ from src.themes.simple_theme_manager import get_theme_manager
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        logger.info("[MainWindow] 开始初始化...")
         super().__init__()
         self.setWindowTitle("X-Tool")
         self.setGeometry(100, 100, 1200, 700)
@@ -26,8 +27,10 @@ class MainWindow(QMainWindow):
         # 插件文件夹映射，用于数据库操作
         self.plugin_folder_map = {}  # plugin_name: folder_id
 
+        logger.info("[MainWindow] 设置样式...")
         # 设置应用样式 - 使用主题系统，样式完全一致，但使用颜色常量
         self.setStyleSheet(Theme.get_main_window_style())
+        logger.info("[MainWindow] 样式设置完成")
 
         # 创建中央部件
         central_widget = QWidget()
