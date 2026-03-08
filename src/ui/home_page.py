@@ -281,9 +281,11 @@ class HomePage(QWidget):
         """加载插件 - 与左侧列表保持一致，从主窗口的 plugin_widget_map 获取"""
         try:
             main_window = self._get_main_window()
+            logger.info(f"[load_plugins] _get_main_window 返回: {main_window}")
             if main_window and hasattr(main_window, 'plugin_widget_map'):
                 # 从主窗口获取已加载的插件映射，与左侧列表保持一致
                 plugin_map = main_window.plugin_widget_map
+                logger.info(f"[load_plugins] plugin_widget_map: {plugin_map}")
                 
                 # 清空现有插件列表
                 self.plugins = []
@@ -307,12 +309,15 @@ class HomePage(QWidget):
                     })
                 
                 self.refresh_cards()
-                logger.info(f"首页从主窗口加载了 {len(self.plugins)} 个插件")
+                logger.info(f"[load_plugins] 首页从主窗口加载了 {len(self.plugins)} 个插件")
             else:
                 # 如果无法获取主窗口，尝试从数据库加载
+                logger.info(f"[load_plugins] 无法获取主窗口，从数据库加载")
                 self._load_plugins_from_database()
         except Exception as e:
-            logger.error(f"加载插件失败: {e}")
+            logger.error(f"[load_plugins] 加载插件失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             
     def _load_plugins_from_database(self):
         """从数据库加载插件（备用方案）"""
