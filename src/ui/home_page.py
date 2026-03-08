@@ -1,9 +1,10 @@
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QPushButton, QGridLayout,
                              QFrame, QSizePolicy, QScrollArea)
 
+import sip
 from src.db.database import Database
 from src.utils.logger import logger
 
@@ -378,7 +379,8 @@ class HomePage(QWidget):
             if category not in new_categories_set and category != "全部":
                 btn = self.category_buttons.pop(category)
                 self.category_layout.removeWidget(btn)
-                btn.deleteLater()
+                # 使用 sip.delete() 立即删除，避免 Windows 上 deleteLater() 在窗口未显示时卡死
+                sip.delete(btn)
         
         # 按左侧栏顺序重新排列按钮
         # 首先隐藏所有现有按钮
@@ -437,7 +439,8 @@ class HomePage(QWidget):
             while self.cards_layout.count():
                 item = self.cards_layout.takeAt(0)
                 if item.widget():
-                    item.widget().deleteLater()
+                    # 使用 sip.delete() 立即删除，避免 Windows 上 deleteLater() 在窗口未显示时卡死
+                    sip.delete(item.widget())
             
             # 筛选插件
             filtered_plugins = self.filter_plugins()
