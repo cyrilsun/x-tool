@@ -27,8 +27,8 @@ class WelcomePageManager:
 
     def init_welcome_page(self):
         """初始化欢迎页面"""
-        # 创建新的首页组件
-        self.home_page = HomePage()
+        # 创建新的首页组件，设置主窗口为父窗口
+        self.home_page = HomePage(self.main_window)
         self.home_page.plugin_selected.connect(self.on_plugin_selected)
         self.main_window.tool_stack_widget.addWidget(self.home_page)
 
