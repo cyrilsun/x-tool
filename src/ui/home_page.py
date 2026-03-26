@@ -350,44 +350,57 @@ class HomePage(QWidget):
         
     def load_categories_from_sidebar(self):
         """从左侧边栏首层文件夹加载分类，保持与左侧栏相同的顺序"""
+        logger.info("[load_categories_from_sidebar] 开始")
         main_window = self._get_main_window()
         if not main_window or not hasattr(main_window, 'tool_list_widget'):
+            logger.info("[load_categories_from_sidebar] 无法获取主窗口或工具列表")
             return
-            
+
         tree = main_window.tool_list_widget
-        
+        logger.info(f"[load_categories_from_sidebar] 树控件顶层项数量: {tree.topLevelItemCount()}")
+
         # 按左侧栏顺序收集文件夹名称
         ordered_categories = ["全部"]  # "全部"始终放在第一位
-        
+
         # 遍历左侧边栏首层项，按顺序获取文件夹名称
         for i in range(tree.topLevelItemCount()):
             item = tree.topLevelItem(i)
             item_data = item.data(0, Qt.ItemDataRole.UserRole)
-            
+
             # 只处理文件夹类型
             if item_data and item_data.get("type") == "folder":
                 folder_name = item.text(0)
                 if folder_name not in ordered_categories:
                     ordered_categories.append(folder_name)
-        
+
+        logger.info(f"[load_categories_from_sidebar] 收集到的分类: {ordered_categories}")
+
         # 获取现有的分类名称
         existing_categories = set(self.category_buttons.keys())
         new_categories_set = set(ordered_categories)
-        
+
         # 移除不再存在的分类按钮（保留"全部"）
+        categories_to_remove = []
         for category in list(existing_categories):
             if category not in new_categories_set and category != "全部":
-                btn = self.category_buttons.pop(category)
-                self.category_layout.removeWidget(btn)
-                # 使用 sip.delete() 立即删除，避免 Windows 上 deleteLater() 在窗口未显示时卡死
-                sip.delete(btn)
-        
-        # 按左侧栏顺序重新排列按钮
-        # 首先隐藏所有现有按钮
-        for btn in self.category_buttons.values():
-            btn.setParent(None)
-        
+                categories_to_remove.append(category)
+
+        logger.info(f"[load_categories_from_sidebar] 需要移除的分类: {categories_to_remove}")
+
+        for category in categories_to_remove:
+            btn = self.category_buttons.pop(category)
+            self.category_layout.removeWidget(btn)
+            # 使用 sip.delete() 立即删除
+            sip.delete(btn)
+
+        # 清空布局并重新添加按钮
+        logger.info("[load_categories_from_sidebar] 清空布局")
+        while self.category_layout.count():
+            item = self.category_layout.takeAt(0)
+            # 不设置 setParent(None)，直接让 Qt 处理
+
         # 按顺序添加按钮（创建新按钮或重用现有按钮）
+        logger.info("[load_categories_from_sidebar] 重新添加按钮")
         for category in ordered_categories:
             if category in self.category_buttons:
                 # 重用现有按钮
@@ -396,14 +409,15 @@ class HomePage(QWidget):
             else:
                 # 创建新按钮
                 self._create_category_button(category)
-                
-        logger.info(f"从左侧边栏加载了分类: {ordered_categories}")
+
+        logger.info(f"[load_categories_from_sidebar] 完成，分类: {ordered_categories}")
         
     def refresh_plugins(self):
         """刷新插件列表 - 与左侧列表保持同步"""
         logger.info("[refresh_plugins] 开始刷新")
         self.load_plugins()
         # 同时刷新分类按钮
+        logger.info("[refresh_plugins] 开始加载分类")
         self.load_categories_from_sidebar()
         logger.info("[refresh_plugins] 刷新完成")
             
