@@ -33,7 +33,7 @@ class ExcelMerger:
     def __init__(self, source_dir: str = "doc", output_dir: str = "merged", selected_files: Optional[List[str]] = None):
         """
         初始化Excel合并器
-        
+
         Args:
             source_dir: 源Excel文件文件夹
             output_dir: 合并后文件输出文件夹
@@ -42,9 +42,6 @@ class ExcelMerger:
         self.source_dir = source_dir
         self.output_dir = output_dir
         self.selected_files = selected_files
-        
-        # 确保输出文件夹存在
-        self._ensure_output_directory()
     
     def _ensure_output_directory(self):
         """确保输出文件夹存在"""
@@ -153,12 +150,12 @@ class ExcelMerger:
             return result
         except Exception as e:
             logger.info(f"✗ 读取文件失败: {os.path.basename(file_path)}, 错误: {str(e)}")
-            return []
+            raise
     
     def merge_excel_files(self, output_filename: Optional[str] = None, header=0, merge_header_rows=False, header_rows=1, header_mode="auto") -> dict:
         """
         合并所有Excel文件，将所有文件的所有sheet合并到同一个sheet
-        
+
         Args:
             output_filename: 输出文件名，如果为None则自动生成
             header: 表头行位置，0表示第一行，None表示无表头
@@ -169,25 +166,28 @@ class ExcelMerger:
                         "first": 使用第一个sheet的表头
                         "union": 使用所有表头的并集
                         "intersection": 使用所有表头的交集
-            
+
         Returns:
             dict: 包含合并结果的详细信息
         """
         # 获取所有Excel文件
         excel_files = self.get_excel_files()
-        
+
         if not excel_files:
             logger.info("没有找到Excel文件，无法进行合并")
             return {
                 "success": False,
                 "message": "没有找到Excel文件，无法进行合并"
             }
-        
+
+        # 确保输出目录存在
+        self._ensure_output_directory()
+
         # 生成输出文件名
         if output_filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_filename = f"merged_excel_{timestamp}.xlsx"
-        
+
         output_path = os.path.join(self.output_dir, output_filename)
         
         logger.info(f"开始合并 {len(excel_files)} 个Excel文件的所有sheet...")
@@ -313,31 +313,34 @@ class ExcelMerger:
     def merge_with_sheet_separation(self, output_filename: Optional[str] = None, header=0, merge_header_rows=False, header_rows=1) -> dict:
         """
         合并Excel文件，每个源文件的每个sheet作为一个单独的工作表
-        
+
         Args:
             output_filename: 输出文件名，如果为None则自动生成
             header: 表头行位置，0表示第一行，None表示无表头
             merge_header_rows: 是否合并多行表头
             header_rows: 表头行数，仅当merge_header_rows为True时有效
-            
+
         Returns:
             dict: 包含合并结果的详细信息
         """
         # 获取所有Excel文件
         excel_files = self.get_excel_files()
-        
+
         if not excel_files:
             logger.info("没有找到Excel文件，无法进行合并")
             return {
                 "success": False,
                 "message": "没有找到Excel文件，无法进行合并"
             }
-        
+
+        # 确保输出目录存在
+        self._ensure_output_directory()
+
         # 生成输出文件名
         if output_filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_filename = f"merged_excel_sheets_{timestamp}.xlsx"
-        
+
         output_path = os.path.join(self.output_dir, output_filename)
         
         logger.info(f"开始合并 {len(excel_files)} 个Excel文件到不同工作表...")
@@ -406,7 +409,7 @@ class ExcelMerger:
         """
         合并同一Excel文件中的多个sheet到一个新的Excel文件
         每个源文件生成一个对应的合并文件
-        
+
         Args:
             header: 表头行位置，0表示第一行，None表示无表头
             merge_header_rows: 是否合并多行表头
@@ -416,20 +419,23 @@ class ExcelMerger:
                         "first": 使用第一个sheet的表头
                         "union": 使用所有表头的并集
                         "intersection": 使用所有表头的交集
-        
+
         Returns:
             dict: 包含合并结果的详细信息
         """
         # 获取所有Excel文件
         excel_files = self.get_excel_files()
-        
+
         if not excel_files:
             logger.info("没有找到Excel文件，无法进行合并")
             return {
                 "success": False,
                 "message": "没有找到Excel文件，无法进行合并"
             }
-        
+
+        # 确保输出目录存在
+        self._ensure_output_directory()
+
         logger.info(f"开始合并 {len(excel_files)} 个Excel文件中的多个sheet...")
         logger.info("=" * 60)
         

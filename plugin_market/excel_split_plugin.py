@@ -33,17 +33,14 @@ class ExcelSplitter:
     def __init__(self, source_file: str, output_dir: str = "split"):
         """
         初始化Excel拆分器
-        
+
         Args:
             source_file: 源Excel文件路径
             output_dir: 拆分后文件输出目录
         """
         self.source_file = source_file
         self.output_dir = output_dir
-        
-        # 确保输出目录存在
-        self._ensure_output_directory()
-    
+
     def _ensure_output_directory(self):
         """确保输出目录存在"""
         if not os.path.exists(self.output_dir):
@@ -71,7 +68,7 @@ class ExcelSplitter:
 
             # 读取指定工作表，将所有列作为字符串类型读取以避免科学计数和精度损失
             df = pd.read_excel(excel_file, sheet_name=sheet_name, header=header, dtype=str)
-            
+
             logger.info(f"✓ 成功读取: {os.path.basename(self.source_file)} - {sheet_name} ({len(df)} 行)")
             return {
                 "sheet_name": sheet_name,
@@ -81,35 +78,33 @@ class ExcelSplitter:
             }
         except Exception as e:
             logger.info(f"✗ 读取文件失败: {os.path.basename(self.source_file)}, 错误: {str(e)}")
-            return {
-                "sheet_name": sheet_name,
-                "dataframe": None,
-                "headers": [],
-                "total_rows": 0
-            }
+            raise
     
     def split_by_rows(self, df: pd.DataFrame, rows_per_file: int, preserve_header: bool = True) -> List[str]:
         """
         按行数拆分Excel文件
-        
+
         Args:
             df: 要拆分的数据框
             rows_per_file: 每个文件包含的行数
             preserve_header: 是否保留表头
-            
+
         Returns:
             List[str]: 生成的文件路径列表
         """
         if rows_per_file <= 0:
             raise ValueError("每个文件的行数必须大于0")
-        
+
         total_rows = len(df)
         if total_rows == 0:
             return []
-        
+
+        # 确保输出目录存在
+        self._ensure_output_directory()
+
         # 计算拆分数量
         num_splits = (total_rows + rows_per_file - 1) // rows_per_file
-        
+
         output_files = []
         base_filename = os.path.splitext(os.path.basename(self.source_file))[0]
         
@@ -141,22 +136,25 @@ class ExcelSplitter:
     def split_by_columns(self, df: pd.DataFrame, columns_per_file: int, preserve_header: bool = True) -> List[str]:
         """
         按列数拆分Excel文件
-        
+
         Args:
             df: 要拆分的数据框
             columns_per_file: 每个文件包含的列数
             preserve_header: 是否保留表头
-            
+
         Returns:
             List[str]: 生成的文件路径列表
         """
         if columns_per_file <= 0:
             raise ValueError("每个文件的列数必须大于0")
-        
+
         total_columns = len(df.columns)
         if total_columns == 0:
             return []
-        
+
+        # 确保输出目录存在
+        self._ensure_output_directory()
+
         # 计算拆分数量
         num_splits = (total_columns + columns_per_file - 1) // columns_per_file
         
@@ -191,21 +189,24 @@ class ExcelSplitter:
     def split_by_field_value(self, df: pd.DataFrame, field_name: str, preserve_header: bool = True) -> List[str]:
         """
         按字段值拆分Excel文件
-        
+
         Args:
             df: 要拆分的数据框
             field_name: 用于拆分的字段名称
             preserve_header: 是否保留表头
-            
+
         Returns:
             List[str]: 生成的文件路径列表
         """
         if field_name not in df.columns:
             raise ValueError(f"字段 '{field_name}' 不存在于数据框中")
-        
+
+        # 确保输出目录存在
+        self._ensure_output_directory()
+
         output_files = []
         base_filename = os.path.splitext(os.path.basename(self.source_file))[0]
-        
+
         # 获取字段的唯一值
         unique_values = df[field_name].unique()
         

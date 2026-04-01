@@ -316,7 +316,7 @@ class DataComparisonPlugin(BasePlugin):
         file_layout = QVBoxLayout()
         
         # 文件选择说明
-        file_instruction = QLabel("请选择要处理的Excel文件，支持.xlsx和.xls格式")
+        file_instruction = QLabel("请选择要处理的Excel文件，支持.xlsx格式")
         file_instruction.setStyleSheet("font-size: 13px; color: #7f8c8d; margin-bottom: 10px;")
         file_layout.addWidget(file_instruction)
         
@@ -637,7 +637,7 @@ class DataComparisonPlugin(BasePlugin):
             </ol>
             <p><strong>功能特点：</strong></p>
             <ul>
-                <li>支持.xlsx和.xls格式的Excel文件</li>
+                <li>支持.xlsx格式的Excel文件</li>
                 <li>支持基于多列组合判断数据重复/唯一</li>
                 <li>支持同时执行多项操作，提高工作效率</li>
                 <li>自动勾选已执行操作对应的导出选项</li>

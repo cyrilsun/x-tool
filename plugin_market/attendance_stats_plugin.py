@@ -425,7 +425,7 @@ class AttendanceStatsPlugin(BasePlugin):
         file_layout = QVBoxLayout()
         
         # 文件选择说明
-        file_instruction = QLabel("请选择要处理的Excel文件，支持.xlsx和.xls格式")
+        file_instruction = QLabel("请选择要处理的Excel文件，支持.xlsx格式")
         file_instruction.setStyleSheet("font-size: 13px; color: #7f8c8d; margin-bottom: 10px;")
         file_layout.addWidget(file_instruction)
         
