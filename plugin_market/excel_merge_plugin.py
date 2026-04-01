@@ -14,7 +14,22 @@ class ExcelMerger:
     Excel合并工具类
     用于将doc文件夹下的所有Excel文件合并成一个新的Excel文件
     """
-    
+
+    def _get_excel_engine(self, file_path: str) -> str:
+        """
+        根据文件扩展名获取合适的Excel引擎
+
+        Args:
+            file_path: Excel文件路径
+
+        Returns:
+            str: 引擎名称 ('openpyxl')
+        """
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext == '.xls':
+            raise Exception(f"不支持 .xls 格式文件，请将文件另存为 .xlsx 格式后重试。\n文件: {os.path.basename(file_path)}")
+        return 'openpyxl'  # 使用openpyxl处理.xlsx文件
+
     def __init__(self, source_dir: str = "doc", output_dir: str = "merged", selected_files: Optional[List[str]] = None):
         """
         初始化Excel合并器
@@ -73,31 +88,32 @@ class ExcelMerger:
     def read_excel_file(self, file_path: str, header=0, merge_header_rows=False, header_rows=1, dtype=str) -> List[dict]:
         """
         读取单个Excel文件中的所有sheet
-        
+
         Args:
             file_path: Excel文件路径
             header: 表头行位置，0表示第一行，None表示无表头
             merge_header_rows: 是否合并多行表头
             header_rows: 表头行数，仅当merge_header_rows为True时有效
             dtype: 数据类型，默认为str
-            
+
         Returns:
             List[dict]: 包含sheet名称、数据框和表头信息的字典列表
         """
         try:
             # 获取文件中的所有sheet
-            excel_file = pd.ExcelFile(file_path)
+            engine = self._get_excel_engine(file_path)
+            excel_file = pd.ExcelFile(file_path, engine=engine)
             sheet_names = excel_file.sheet_names
             file_name = os.path.basename(file_path)
-            
+
             result = []
-            
+
             for sheet_name in sheet_names:
                 try:
                     if merge_header_rows and header_rows > 1:
                         # 读取多行表头
                         df_raw = pd.read_excel(excel_file, sheet_name=sheet_name, header=None, dtype=str)  # 强制使用str类型
-                        
+
                         # 合并多行表头
                         header_data = df_raw.iloc[:header_rows].fillna('')
                         merged_headers = []
@@ -107,17 +123,17 @@ class ExcelMerger:
                                 header_val = header_data.iloc[row_idx, col_idx]
                                 if header_val.strip():
                                     header_parts.append(str(header_val))
-                            
+
                             if header_parts:
                                 merged_header = ' '.join(header_parts)
                             else:
                                 merged_header = f'Column_{col_idx}'
                             merged_headers.append(merged_header)
-                        
+
                         # 设置新的表头并跳过表头行
                         df = df_raw.iloc[header_rows:].copy()
                         df.columns = merged_headers
-                        
+
                         # 确保所有列都是字符串类型
                         df = df.astype(str)
                     else:

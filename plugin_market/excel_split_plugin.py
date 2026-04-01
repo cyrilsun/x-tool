@@ -14,7 +14,22 @@ class ExcelSplitter:
     Excel拆分工具类
     用于将Excel文件按不同方式拆分为多个文件
     """
-    
+
+    def _get_excel_engine(self, file_path: str) -> str:
+        """
+        根据文件扩展名获取合适的Excel引擎
+
+        Args:
+            file_path: Excel文件路径
+
+        Returns:
+            str: 引擎名称 ('openpyxl')
+        """
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext == '.xls':
+            raise Exception(f"不支持 .xls 格式文件，请将文件另存为 .xlsx 格式后重试。\n文件: {os.path.basename(file_path)}")
+        return 'openpyxl'  # 使用openpyxl处理.xlsx文件
+
     def __init__(self, source_file: str, output_dir: str = "split"):
         """
         初始化Excel拆分器
@@ -38,21 +53,22 @@ class ExcelSplitter:
     def read_excel_file(self, sheet_name: Optional[str] = None, header=0) -> Dict[str, Any]:
         """
         读取Excel文件
-        
+
         Args:
             sheet_name: 工作表名称，None表示读取第一个工作表
             header: 表头行位置，0表示第一行
-            
+
         Returns:
             Dict[str, Any]: 包含数据框、工作表名称、表头信息的字典
         """
         try:
             # 获取文件中的所有工作表
-            excel_file = pd.ExcelFile(self.source_file)
-            
+            engine = self._get_excel_engine(self.source_file)
+            excel_file = pd.ExcelFile(self.source_file, engine=engine)
+
             if sheet_name is None:
                 sheet_name = excel_file.sheet_names[0]
-            
+
             # 读取指定工作表，将所有列作为字符串类型读取以避免科学计数和精度损失
             df = pd.read_excel(excel_file, sheet_name=sheet_name, header=header, dtype=str)
             

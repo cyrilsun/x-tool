@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import List, Dict, Any
 
@@ -48,31 +49,47 @@ class ExcelComparator:
             "summary": {}
         }
     
+    def _get_excel_engine(self, file_path: str) -> str:
+        """
+        根据文件扩展名获取合适的Excel引擎
+
+        Args:
+            file_path: Excel文件路径
+
+        Returns:
+            str: 引擎名称 ('openpyxl')
+        """
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext == '.xls':
+            raise Exception(f"不支持 .xls 格式文件，请将文件另存为 .xlsx 格式后重试。\n文件: {os.path.basename(file_path)}")
+        return 'openpyxl'  # 使用openpyxl处理.xlsx文件
+
     def _read_excel(self, file_path: str, sheet_name: str = None) -> pd.DataFrame:
         """
         读取Excel文件
-        
+
         Args:
             file_path: Excel文件路径
             sheet_name: sheet名称，如果为None则使用第一个sheet
-            
+
         Returns:
             pd.DataFrame: 读取的数据
         """
         try:
+            engine = self._get_excel_engine(file_path)
             # 使用dtype=str读取所有列，避免科学计数法
             if sheet_name:
-                df = pd.read_excel(file_path, sheet_name=sheet_name, dtype=str)
+                df = pd.read_excel(file_path, sheet_name=sheet_name, dtype=str, engine=engine)
             else:
                 # 当sheet_name为None时，read_excel会返回字典，需要获取第一个sheet
-                df_dict = pd.read_excel(file_path, sheet_name=None, dtype=str)
+                df_dict = pd.read_excel(file_path, sheet_name=None, dtype=str, engine=engine)
                 if not df_dict:
                     raise Exception("Excel文件中没有找到任何sheet")
                 # 获取第一个sheet的数据
                 df = list(df_dict.values())[0]
-            
+
             # 不再移除.n结尾，避免误删有效数据（如版本号、价格）
-            
+
             return df
         except Exception as e:
             raise Exception(f"读取Excel文件失败: {str(e)}")
@@ -80,15 +97,16 @@ class ExcelComparator:
     def get_sheet_names(self, file_path: str) -> List[str]:
         """
         获取Excel文件的所有sheet名称
-        
+
         Args:
             file_path: Excel文件路径
-            
+
         Returns:
             List[str]: sheet名称列表
         """
         try:
-            excel_file = pd.ExcelFile(file_path)
+            engine = self._get_excel_engine(file_path)
+            excel_file = pd.ExcelFile(file_path, engine=engine)
             return excel_file.sheet_names
         except Exception as e:
             raise Exception(f"获取sheet名称失败: {str(e)}")
@@ -700,6 +718,21 @@ class ExcelComparisonPlugin(BasePlugin):
         self.comparison_result = None
 
         self._setup_ui()
+
+    def _get_excel_engine(self, file_path: str) -> str:
+        """
+        根据文件扩展名获取合适的Excel引擎
+
+        Args:
+            file_path: Excel文件路径
+
+        Returns:
+            str: 引擎名称 ('openpyxl')
+        """
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext == '.xls':
+            raise Exception(f"不支持 .xls 格式文件，请将文件另存为 .xlsx 格式后重试。\n文件: {os.path.basename(file_path)}")
+        return 'openpyxl'  # 使用openpyxl处理.xlsx文件
     
     def on_activate(self):
         """
@@ -1058,7 +1091,8 @@ class ExcelComparisonPlugin(BasePlugin):
                 self.sheet1_name = sheet_names[0]
                 
                 # 加载列名并过滤掉Unnamed列
-                df = pd.read_excel(file_path, sheet_name=sheet_names[0])
+                engine = self._get_excel_engine(file_path)
+                df = pd.read_excel(file_path, sheet_name=sheet_names[0], engine=engine)
                 columns = [col for col in df.columns.tolist() if not col.startswith('Unnamed:')]
                 self.primary_key_list.clear()
                 self.primary_key_list.addItems(columns)
@@ -1096,8 +1130,10 @@ class ExcelComparisonPlugin(BasePlugin):
                 # 如果两个文件都已选择，更新主键下拉框，只显示共有的列名
                 if self.file1_path:
                     # 读取两个文件的第一个Sheet的列名
-                    df1 = pd.read_excel(self.file1_path, sheet_name=self.sheet1_name)
-                    df2 = pd.read_excel(file_path, sheet_name=self.sheet2_name)
+                    engine1 = self._get_excel_engine(self.file1_path)
+                    engine2 = self._get_excel_engine(file_path)
+                    df1 = pd.read_excel(self.file1_path, sheet_name=self.sheet1_name, engine=engine1)
+                    df2 = pd.read_excel(file_path, sheet_name=self.sheet2_name, engine=engine2)
                     
                     # 获取共有的列名并过滤掉Unnamed列，保持与第一个表格相同的顺序
                     df2_columns = set(df2.columns)
